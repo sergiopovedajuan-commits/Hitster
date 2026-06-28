@@ -1,0 +1,13 @@
+{
+  "name": "cronotrack",
+  "version": "1.0.0",
+  "description": "Cronotrack — juego musical tipo Hitster (2000-2026) para jugar con amigos en local",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}
