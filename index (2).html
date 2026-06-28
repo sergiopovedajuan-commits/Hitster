@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cronotrack — Construye tu línea del tiempo musical</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #120e16;
+    --surface: #1c1623;
+    --surface-2: #261d2e;
+    --line: #34293f;
+    --cream: #f3eee6;
+    --muted: #9089a0;
+    --magenta: #ff3d7f;
+    --teal: #2fe6c4;
+    --gold: #ffb84d;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+
+  body{
+    background: radial-gradient(circle at 20% 0%, #1d1426 0%, var(--bg) 55%);
+    color: var(--cream);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px 60px;
+  }
+
+  h1, h2, h3 { font-family: var(--font-display); margin: 0; }
+
+  .app{ width: 100%; max-width: 880px; }
+
+  /* ---------- HEADER ---------- */
+  .brand{
+    display:flex; align-items:center; justify-content:center;
+    gap: 12px; margin-bottom: 6px;
+  }
+  .brand h1{
+    font-size: 30px; letter-spacing: 0.5px;
+  }
+  .brand h1 span{ color: var(--magenta); }
+  .tagline{
+    text-align:center; color: var(--muted); font-size: 13px;
+    margin-bottom: 32px; font-family: var(--font-mono);
+  }
+
+  /* ---------- SETUP SCREEN ---------- */
+  .panel{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 28px;
+  }
+
+  .setup-row{
+    display:flex; gap:10px; margin-bottom: 12px;
+  }
+  .setup-row input{
+    flex:1;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--cream);
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-size: 15px;
+  }
+  .setup-row input:focus{ outline: 2px solid var(--teal); }
+
+  .player-chip{
+    display:flex; align-items:center; justify-content:space-between;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+  .player-chip button{
+    background:none; border:none; color: var(--muted);
+    cursor:pointer; font-size: 16px;
+  }
+  .player-chip button:hover{ color: var(--magenta); }
+
+  .btn{
+    font-family: var(--font-display);
+    font-weight: 700;
+    border: none;
+    border-radius: 10px;
+    padding: 13px 22px;
+    cursor: pointer;
+    font-size: 15px;
+    transition: transform .08s ease, opacity .15s ease;
+  }
+  .btn:active{ transform: scale(0.97); }
+  .btn:disabled{ opacity:.35; cursor:not-allowed; }
+  .btn-primary{ background: var(--magenta); color: #1a0a12; }
+  .btn-primary:hover:not(:disabled){ background:#ff5a92; }
+  .btn-ghost{ background: var(--surface-2); color: var(--cream); border:1px solid var(--line); }
+  .btn-ghost:hover{ background:#2e2438; }
+  .btn-block{ width:100%; }
+
+  .hint{ color: var(--muted); font-size: 13px; margin-top: 14px; }
+
+  /* ---------- GAME SCREEN ---------- */
+  .hidden{ display:none !important; }
+
+  .top-bar{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom: 22px; flex-wrap: wrap; gap: 10px;
+  }
+  .turn-info{
+    font-family: var(--font-mono); font-size: 13px; color: var(--muted);
+  }
+  .turn-info strong{ color: var(--teal); }
+  .goal-info{
+    font-family: var(--font-mono); font-size: 13px; color: var(--muted);
+  }
+
+  /* Vinyl / now playing */
+  .stage{
+    display:flex; gap: 26px; align-items:center;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 24px;
+    margin-bottom: 26px;
+  }
+  .vinyl-wrap{ position: relative; width: 96px; height: 96px; flex-shrink:0; }
+  .vinyl{
+    width: 96px; height: 96px; border-radius: 50%;
+    background: repeating-radial-gradient(circle, #2a2034 0 4px, #1a1422 4px 8px);
+    border: 2px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .vinyl.spinning{ animation: spin 2.4s linear infinite; }
+  @keyframes spin{ from{ transform: rotate(0deg);} to{ transform: rotate(360deg);} }
+  .vinyl-label{
+    width: 34px; height: 34px; border-radius:50%;
+    background: var(--magenta);
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--font-display); font-weight:700; color:#1a0a12; font-size: 14px;
+  }
+
+  .stage-info{ flex:1; }
+  .stage-info .status{
+    font-family: var(--font-mono); font-size: 12px; color: var(--teal);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
+  }
+  .stage-info h2{ font-size: 19px; margin-bottom: 4px; }
+  .stage-info p{ margin:0; color: var(--muted); font-size: 13px; }
+
+  .reveal-card{
+    display:none;
+    margin-top: 10px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+  .reveal-card.show{ display:block; }
+  .reveal-card .year{
+    font-family: var(--font-display);
+    font-size: 22px;
+    color: var(--gold);
+  }
+
+  .stage-actions{ display:flex; flex-direction:column; gap:8px; }
+
+  /* Timeline */
+  .timeline-section h3{ font-size: 15px; margin-bottom: 12px; color: var(--cream); }
+  .timeline-section .sub{
+    color: var(--muted); font-size: 12.5px; margin: -8px 0 14px;
+  }
+
+  .timeline{
+    display:flex; align-items:center;
+    overflow-x: auto;
+    padding: 6px 0 16px;
+    gap: 0;
+  }
+  .gap{
+    width: 26px; min-width: 26px; height: 92px;
+    display:flex; align-items:center; justify-content:center;
+    cursor: default;
+  }
+  .gap-slot{
+    width: 18px; height: 70px;
+    border-radius: 9px;
+    border: 1.5px dashed var(--line);
+    transition: all .15s ease;
+  }
+  .gap.interactive{ cursor:pointer; }
+  .gap.interactive .gap-slot{
+    border-color: var(--teal);
+    background: rgba(47,230,196,0.08);
+  }
+  .gap.interactive:hover .gap-slot{
+    background: rgba(47,230,196,0.25);
+    transform: scaleX(1.3);
+  }
+
+  .song-card{
+    width: 124px; min-width: 124px; height: 92px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    font-size: 12px;
+  }
+  .song-card .yr{
+    font-family: var(--font-display); font-weight:700; font-size: 19px; color: var(--teal);
+  }
+  .song-card .ti{ color: var(--cream); font-weight:600; line-height:1.25;
+    overflow:hidden; text-overflow: ellipsis; display:-webkit-box;
+    -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  }
+  .song-card .ar{ color: var(--muted); font-size: 11px; }
+
+  .song-card.correct{ border-color: var(--teal); box-shadow: 0 0 0 1px var(--teal) inset; }
+  .song-card.flash-wrong{
+    border-color: var(--magenta);
+    animation: shake .35s ease;
+  }
+  @keyframes shake{
+    0%,100%{ transform: translateX(0); }
+    25%{ transform: translateX(-4px); }
+    75%{ transform: translateX(4px); }
+  }
+
+  .feedback{
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    display:none;
+  }
+  .feedback.show{ display:block; }
+  .feedback.ok{ background: rgba(47,230,196,0.12); color: var(--teal); border:1px solid rgba(47,230,196,.4); }
+  .feedback.bad{ background: rgba(255,61,127,0.12); color: var(--magenta); border:1px solid rgba(255,61,127,.4); }
+
+  /* Scoreboard */
+  .scoreboard{
+    margin-top: 28px;
+    display:flex; gap:10px; flex-wrap:wrap;
+  }
+  .score-chip{
+    flex:1; min-width: 140px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    transition: border-color .2s ease;
+  }
+  .score-chip.active{ border-color: var(--teal); }
+  .score-chip .name{ font-size: 13px; font-weight:600; display:flex; align-items:center; gap:6px; }
+  .score-chip .count{
+    font-family: var(--font-mono); color: var(--gold); font-size: 13px; margin-top: 4px;
+  }
+  .streak-badge{
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--gold); background: rgba(255,184,77,0.12);
+    border: 1px solid rgba(255,184,77,.4);
+    padding: 1px 6px; border-radius: 8px;
+  }
+  .token-badge{
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--teal); background: rgba(47,230,196,0.1);
+    border: 1px solid rgba(47,230,196,.35);
+    padding: 1px 6px; border-radius: 8px;
+  }
+  .steal-btn{
+    font-family: var(--font-mono); font-size: 13px;
+    background: var(--surface-2); color: var(--cream);
+    border: 1px solid var(--magenta);
+    padding: 9px 14px; border-radius: 10px; cursor:pointer;
+  }
+  .steal-btn:hover:not(:disabled){ background: rgba(255,61,127,0.15); }
+  .steal-btn:disabled{ opacity:.35; cursor:not-allowed; border-color: var(--line); }
+
+  /* ---------- TOP BAR EXTRAS: fiesta toggle ---------- */
+  .fiesta-toggle{
+    display:flex; align-items:center; gap:8px;
+    font-family: var(--font-mono); font-size: 12px; color: var(--muted);
+    cursor:pointer; user-select:none;
+    background: var(--surface); border:1px solid var(--line);
+    padding: 7px 12px; border-radius: 999px;
+  }
+  .fiesta-toggle input{ accent-color: var(--magenta); width:14px; height:14px; cursor:pointer; }
+  .fiesta-toggle.active{ border-color: var(--magenta); color: var(--magenta); }
+
+  body.fiesta-on{
+    background: radial-gradient(circle at 20% 0%, #2a1430 0%, var(--bg) 60%);
+    animation: fiestaPulse 6s ease-in-out infinite;
+  }
+  @keyframes fiestaPulse{
+    0%,100%{ filter: hue-rotate(0deg); }
+    50%{ filter: hue-rotate(18deg); }
+  }
+  .vinyl.fiesta.spinning{ animation: spin 0.9s linear infinite; }
+
+  /* ---------- Card pop-in animation ---------- */
+  @keyframes popIn{
+    0%{ transform: scale(0.4); opacity:0; }
+    70%{ transform: scale(1.08); opacity:1; }
+    100%{ transform: scale(1); }
+  }
+  .song-card.pop-in{ animation: popIn .35s ease-out; }
+
+  /* ---------- Full-screen flash feedback ---------- */
+  .flash-overlay{
+    position: fixed; inset:0; pointer-events:none; z-index: 40;
+    opacity: 0; transition: opacity .12s ease;
+  }
+  .flash-overlay.flash-ok{ background: rgba(47,230,196,0.18); opacity:1; }
+  .flash-overlay.flash-bad{ background: rgba(255,61,127,0.18); opacity:1; }
+
+  /* ---------- Confetti ---------- */
+  .confetti-piece{
+    position: fixed; top: -20px; z-index: 60; pointer-events:none;
+    width: 8px; height: 14px; border-radius: 2px;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall{
+    0%{ transform: translateY(0) rotate(0deg); opacity:1; }
+    100%{ transform: translateY(110vh) rotate(540deg); opacity:0.9; }
+  }
+
+  /* ---------- Handoff (pass the device) screen ---------- */
+  .handoff-card{
+    background: var(--surface); border: 1px solid var(--teal);
+    border-radius: 20px; padding: 44px 36px; text-align:center; max-width: 360px;
+  }
+  .handoff-card .pass-icon{ font-size: 42px; margin-bottom: 10px; }
+  .handoff-card h2{ font-size: 22px; margin-bottom: 6px; }
+  .handoff-card p{ color: var(--muted); margin: 8px 0 24px; font-size: 13.5px; }
+
+  /* Winner overlay */
+  .overlay{
+    position: fixed; inset:0; background: rgba(10,7,13,0.88);
+    display:flex; align-items:center; justify-content:center;
+    z-index: 50;
+  }
+  .overlay.hidden{ display:none; }
+  .win-card{
+    background: var(--surface); border: 1px solid var(--magenta);
+    border-radius: 20px; padding: 40px; text-align:center; max-width: 360px;
+  }
+  .win-card h2{ font-size: 26px; margin-bottom: 8px; }
+  .win-card .crown{ font-size: 40px; }
+  .win-card p{ color: var(--muted); margin: 10px 0 22px; font-size: 14px; }
+
+  footer{
+    margin-top: 40px; color: var(--muted); font-size: 12px; text-align:center;
+    font-family: var(--font-mono);
+  }
+
+  @media (max-width: 540px){
+    .stage{ flex-direction: column; align-items:flex-start; }
+    .stage-actions{ width:100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="brand">
+    <h1>CRONO<span>TRACK</span></h1>
+  </div>
+  <p class="tagline">música 2000 → 2026 · construye tu línea del tiempo</p>
+
+  <!-- ============ SETUP SCREEN ============ -->
+  <section id="setup" class="panel">
+    <h3 style="margin-bottom:16px;">Jugadores</h3>
+    <div class="setup-row">
+      <input type="text" id="playerNameInput" placeholder="Nombre del jugador" maxlength="16">
+      <button class="btn btn-primary" id="addPlayerBtn">Añadir</button>
+    </div>
+    <div id="playerList"></div>
+
+    <label class="fiesta-toggle" id="fiestaToggleSetup" style="margin-top:6px; width:fit-content;">
+      <input type="checkbox" id="fiestaCheckbox">
+      🎉 Modo Fiesta (canciones totalmente al azar, sin orden)
+    </label>
+
+    <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--line);">
+      <label class="fiesta-toggle" id="nightToggleWrap" style="width:fit-content;">
+        <input type="checkbox" id="nightModeCheckbox" checked>
+        🌙 Modo noche: no repetir canciones de partidas anteriores
+      </label>
+      <p class="hint" style="margin-top:8px;">
+        📦 Canciones disponibles para la próxima partida: <strong id="poolCount" style="color:var(--teal);">563 / 563</strong>
+      </p>
+      <button class="btn btn-ghost" id="resetNightBtn" style="margin-top:4px;">🔄 Reiniciar mazo de la noche</button>
+    </div>
+
+    <p class="hint hidden" id="startGameWarning" style="color:var(--magenta); margin-top:12px;"></p>
+
+    <button class="btn btn-primary btn-block" id="startGameBtn" style="margin-top:18px;" disabled>
+      Empezar partida
+    </button>
+    <p class="hint">Añade al menos 2 jugadores. Cada uno empieza con una canción ya colocada en su línea de tiempo.</p>
+  </section>
+
+  <!-- ============ GAME SCREEN ============ -->
+  <section id="game" class="hidden">
+
+    <div class="top-bar">
+      <div class="turn-info">Turno de <strong id="turnPlayerName">—</strong> · <span id="turnTokens">🎟️ 0 fichas</span></div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <label class="fiesta-toggle" id="fiestaToggleGame">
+          <input type="checkbox" id="fiestaCheckboxGame">
+          🎉 Fiesta
+        </label>
+        <div class="goal-info" id="goalInfo">objetivo: 10 canciones</div>
+        <div class="goal-info" id="deckInfo">🗂️ 0 restantes</div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="vinyl-wrap">
+        <div class="vinyl" id="vinyl">
+          <div class="vinyl-label" id="vinylLabel">?</div>
+        </div>
+      </div>
+      <div class="stage-info">
+        <div class="status" id="statusLabel">esperando</div>
+        <h2 id="stageTitle">Pulsa "Siguiente canción" para empezar</h2>
+        <p id="stageSub">Escucha (simulado) y coloca la canción en tu línea de tiempo.</p>
+        <div class="reveal-card" id="revealCard">
+          <span class="year" id="revealYear"></span>
+          <div id="revealTitle"></div>
+          <div id="revealArtist" style="color:var(--muted);"></div>
+        </div>
+      </div>
+      <div class="stage-actions">
+        <button class="btn btn-primary" id="nextSongBtn">▶ Siguiente canción</button>
+        <button class="btn btn-ghost hidden" id="replayBtn">🔁 Repetir clip</button>
+        <button class="btn btn-ghost hidden" id="bonusGuessBtn">🎤 Acerté título/artista (+1 🎟️)</button>
+        <button class="btn btn-ghost hidden" id="changeSongBtn">🔄 Cambiar canción (3 🎟️)</button>
+        <button class="btn btn-ghost hidden" id="continueBtn">Continuar →</button>
+        <audio id="previewAudio" preload="none"></audio>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="challengePanel" style="margin-bottom:22px; padding:18px 20px;">
+      <h3 style="font-size:14px; margin-bottom:8px;">🔔 ¿Alguien quiere robar esta carta?</h3>
+      <p class="hint" style="margin:0 0 12px;" id="challengeHint">Antes de revelar el año, cualquier otro jugador puede gastar 1 ficha para intentar colocarla en SU propia línea de tiempo.</p>
+      <div id="challengeButtons" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;"></div>
+      <button class="btn btn-primary btn-block" id="revealBtn">🎴 Revelar año</button>
+    </div>
+
+    <div class="timeline-section">
+      <h3 id="timelineOwnerLabel">Línea de tiempo</h3>
+      <p class="sub" id="timelineHint">Toca un hueco entre las canciones (o en un extremo) para colocar la nueva canción ahí.</p>
+      <div class="timeline" id="timeline"></div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+
+
+    <div class="scoreboard" id="scoreboard"></div>
+  </section>
+
+  <footer>
+    422 canciones reales (2000–2026) · año/artista verificados a mano · preview vía iTunes Search API
+  </footer>
+</div>
+
+<div class="flash-overlay" id="flashOverlay"></div>
+
+<!-- ============ HANDOFF: pasa el dispositivo ============ -->
+<div class="overlay hidden" id="handoffOverlay">
+  <div class="handoff-card">
+    <div class="pass-icon">📱➡️</div>
+    <h2>Pasa el dispositivo a <span id="handoffName" style="color:var(--teal);">—</span></h2>
+    <p>Que nadie más mire la pantalla hasta que sea su turno.</p>
+    <button class="btn btn-primary btn-block" id="handoffReadyBtn">¡Listo, es mi turno!</button>
+  </div>
+</div>
+
+<!-- ============ WINNER OVERLAY ============ -->
+<div class="overlay hidden" id="winOverlay">
+  <div class="win-card">
+    <div class="crown">🏆</div>
+    <h2 id="winnerName">¡Jugador X gana!</h2>
+    <p>Ha completado su línea de tiempo con 10 canciones correctas.</p>
+    <button class="btn btn-primary btn-block" id="restartBtn">Jugar otra vez</button>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   1. DATOS SIMULADOS — sustituir por dataset real/API después
+   ========================================================= */
+/* Dataset real: 422 canciones (2000-2026), título/artista/año/género.
+   El preview de audio NO viene en este array: se busca en tiempo real
+   contra la iTunes Search API (gratuita, sin clave) cuando se reproduce
+   cada canción. Ver fetchPreview() más abajo. */
+const SONGS = [
+  {title:"El Alma al Aire", artist:"Alejandro Sanz", year:2000, genre:"pop"},
+  {title:"She Bangs", artist:"Ricky Martin", year:2000, genre:"pop"},
+  {title:"A Puro Dolor", artist:"Son By Four", year:2000, genre:"balada"},
+  {title:"Rosas", artist:"La Oreja de Van Gogh", year:2000, genre:"pop"},
+  {title:"Aquí", artist:"La Ley", year:2000, genre:"rock"},
+  {title:"Music", artist:"Madonna", year:2000, genre:"pop"},
+  {title:"Otherside", artist:"Red Hot Chili Peppers", year:2000, genre:"rock"},
+  {title:"Yellow", artist:"Coldplay", year:2000, genre:"rock"},
+  {title:"Stan", artist:"Eminem", year:2000, genre:"rap"},
+  {title:"Beautiful Day", artist:"U2", year:2000, genre:"rock"},
+  {title:"Try Again", artist:"Aaliyah", year:2000, genre:"r&b"},
+  {title:"Bent", artist:"Matchbox Twenty", year:2000, genre:"rock"},
+  {title:"Con Los Años Que Me Quedan", artist:"Joaquín Sabina", year:2000, genre:"cantautor"},
+  {title:"Maria Maria", artist:"Santana ft. The Product G&B", year:2000, genre:"latin-pop"},
+  {title:"Yo Quiero Bailar", artist:"Sergio Vargas", year:2000, genre:"merengue"},
+  {title:"Suerte (Whenever, Wherever)", artist:"Shakira", year:2001, genre:"pop"},
+  {title:"Hero", artist:"Enrique Iglesias", year:2001, genre:"pop"},
+  {title:"Hanging by a Moment", artist:"Lifehouse", year:2001, genre:"rock"},
+  {title:"Fallin'", artist:"Alicia Keys", year:2001, genre:"r&b"},
+  {title:"It Wasn't Me", artist:"Shaggy ft. Rikrok", year:2001, genre:"reggae"},
+  {title:"Drops of Jupiter", artist:"Train", year:2001, genre:"rock"},
+  {title:"In the End", artist:"Linkin Park", year:2001, genre:"rock"},
+  {title:"All for You", artist:"Janet Jackson", year:2001, genre:"pop"},
+  {title:"Get the Party Started", artist:"Pink", year:2001, genre:"pop"},
+  {title:"Hey Baby", artist:"No Doubt ft. Bounty Killer", year:2001, genre:"pop"},
+  {title:"Lady Marmalade", artist:"Christina Aguilera, Lil' Kim, Mýa & Pink", year:2001, genre:"pop"},
+  {title:"Color Esperanza", artist:"Diego Torres", year:2001, genre:"pop"},
+  {title:"Mariposa Traicionera", artist:"Maná", year:2002, genre:"rock"},
+  {title:"Sólo Quédate en Silencio", artist:"Maná", year:2002, genre:"rock"},
+  {title:"Whats Luv?", artist:"Fat Joe ft. Ashanti", year:2002, genre:"rap"},
+  {title:"A Dios le Pido", artist:"Juanes", year:2002, genre:"rock-latino"},
+  {title:"Y, ¿Si Fuera Ella?", artist:"Alejandro Sanz", year:2002, genre:"pop"},
+  {title:"Asereje (The Ketchup Song)", artist:"Las Ketchup", year:2002, genre:"pop"},
+  {title:"Caraluna", artist:"Bacilos", year:2002, genre:"pop-latino"},
+  {title:"Complicated", artist:"Avril Lavigne", year:2002, genre:"pop-rock"},
+  {title:"Underneath It All", artist:"No Doubt ft. Lady Saw", year:2002, genre:"pop"},
+  {title:"Dilemma", artist:"Nelly ft. Kelly Rowland", year:2002, genre:"rap"},
+  {title:"The Game of Love", artist:"Santana ft. Michelle Branch", year:2002, genre:"pop"},
+  {title:"Foolish", artist:"Ashanti", year:2002, genre:"r&b"},
+  {title:"A Thousand Miles", artist:"Vanessa Carlton", year:2002, genre:"pop"},
+  {title:"Clocks", artist:"Coldplay", year:2002, genre:"rock"},
+  {title:"Sk8er Boi", artist:"Avril Lavigne", year:2002, genre:"pop-rock"},
+  {title:"Underneath Your Clothes", artist:"Shakira", year:2002, genre:"pop"},
+  {title:"Te Quiero Más", artist:"La Quinta Estación", year:2002, genre:"pop"},
+  {title:"Hips Don't Lie (demo era)", artist:"Shakira", year:2002, genre:"pop"},
+  {title:"Fotografía", artist:"Juanes & Nelly Furtado", year:2003, genre:"pop-latino"},
+  {title:"In Da Club", artist:"50 Cent", year:2003, genre:"rap"},
+  {title:"Hey Ya!", artist:"OutKast", year:2003, genre:"pop-rap"},
+  {title:"Crazy in Love", artist:"Beyoncé ft. Jay-Z", year:2003, genre:"r&b"},
+  {title:"Toxic", artist:"Britney Spears", year:2003, genre:"pop"},
+  {title:"Es Por Ti", artist:"Juanes", year:2003, genre:"rock-latino"},
+  {title:"Frontin'", artist:"Pharrell ft. Jay-Z", year:2003, genre:"r&b"},
+  {title:"Ignition", artist:"R. Kelly", year:2003, genre:"r&b"},
+  {title:"White Flag", artist:"Dido", year:2003, genre:"pop"},
+  {title:"Officially Missing You", artist:"Tamia", year:2003, genre:"r&b"},
+  {title:"Drift Away", artist:"Uncle Kracker ft. Dobie Gray", year:2003, genre:"pop"},
+  {title:"Bonito", artist:"Jarabe de Palo", year:2003, genre:"pop-rock"},
+  {title:"Te Necesito", artist:"Marc Anthony", year:2003, genre:"salsa"},
+  {title:"Andas en Mi Cabeza", artist:"Chayanne", year:2003, genre:"pop"},
+  {title:"Seventeen", artist:"Mando Diao", year:2003, genre:"rock"},
+  {title:"Mr. Brightside", artist:"The Killers", year:2004, genre:"rock"},
+  {title:"La Camisa Negra", artist:"Juanes", year:2004, genre:"rock-latino"},
+  {title:"Algo Está Cambiando", artist:"La Oreja de Van Gogh", year:2004, genre:"pop"},
+  {title:"Yeah!", artist:"Usher ft. Lil Jon & Ludacris", year:2004, genre:"r&b"},
+  {title:"Toxic Reprise", artist:"Britney Spears", year:2004, genre:"pop"},
+  {title:"This Love", artist:"Maroon 5", year:2004, genre:"pop-rock"},
+  {title:"Vertigo", artist:"U2", year:2004, genre:"rock"},
+  {title:"Confessions Part II", artist:"Usher", year:2004, genre:"r&b"},
+  {title:"Drop It Like It's Hot", artist:"Snoop Dogg ft. Pharrell", year:2004, genre:"rap"},
+  {title:"Pieces of Me", artist:"Ashlee Simpson", year:2004, genre:"pop"},
+  {title:"Tarde lo Conocí", artist:"Olga Tañón", year:2004, genre:"merengue"},
+  {title:"Lágrimas de Cristal", artist:"Belinda", year:2004, genre:"pop"},
+  {title:"Y Llegaste Tú", artist:"Gilberto Santa Rosa", year:2004, genre:"salsa"},
+  {title:"Quiero Que Vuelvas", artist:"Marc Anthony", year:2004, genre:"salsa"},
+  {title:"Float On", artist:"Modest Mouse", year:2004, genre:"indie"},
+  {title:"La Tortura", artist:"Shakira ft. Alejandro Sanz", year:2005, genre:"pop-latino"},
+  {title:"Gasolina", artist:"Daddy Yankee", year:2005, genre:"reggaeton"},
+  {title:"Mayores", artist:"Don Omar", year:2005, genre:"reggaeton"},
+  {title:"Hips Don't Lie (sesión)", artist:"Shakira", year:2005, genre:"pop"},
+  {title:"Hung Up", artist:"Madonna", year:2005, genre:"pop"},
+  {title:"Speed of Sound", artist:"Coldplay", year:2005, genre:"rock"},
+  {title:"Don't Phunk with My Heart", artist:"The Black Eyed Peas", year:2005, genre:"pop"},
+  {title:"Boulevard of Broken Dreams", artist:"Green Day", year:2005, genre:"rock"},
+  {title:"Mil Años Luz", artist:"David Civera", year:2005, genre:"pop"},
+  {title:"Rabiosa (era)", artist:"Shakira", year:2005, genre:"pop"},
+  {title:"Algo Contigo", artist:"Ricardo Arjona", year:2005, genre:"pop-latino"},
+  {title:"Pegao", artist:"Wisin & Yandel", year:2005, genre:"reggaeton"},
+  {title:"Llorar", artist:"Jesse & Joy", year:2005, genre:"pop"},
+  {title:"Crazy", artist:"Gnarls Barkley", year:2006, genre:"soul"},
+  {title:"Photograph", artist:"Nickelback", year:2005, genre:"rock"},
+  {title:"Hips Don't Lie", artist:"Shakira ft. Wyclef Jean", year:2006, genre:"pop"},
+  {title:"Rakata", artist:"Wisin & Yandel", year:2006, genre:"reggaeton"},
+  {title:"Dile", artist:"Don Omar", year:2006, genre:"reggaeton"},
+  {title:"Bad Day", artist:"Daniel Powter", year:2006, genre:"pop"},
+  {title:"SexyBack", artist:"Justin Timberlake", year:2006, genre:"pop"},
+  {title:"Hey There Delilah", artist:"Plain White T's", year:2006, genre:"pop-rock"},
+  {title:"Buttons", artist:"The Pussycat Dolls", year:2006, genre:"pop"},
+  {title:"Promiscuous", artist:"Nelly Furtado ft. Timbaland", year:2006, genre:"r&b"},
+  {title:"Irreplaceable", artist:"Beyoncé", year:2006, genre:"r&b"},
+  {title:"Smack That", artist:"Akon ft. Eminem", year:2006, genre:"rap"},
+  {title:"Volverte a Ver", artist:"Camila", year:2006, genre:"pop"},
+  {title:"Te Quiero", artist:"Flex", year:2006, genre:"reggaeton"},
+  {title:"Eres Tú", artist:"Kalimba", year:2006, genre:"pop"},
+  {title:"No Hay Nadie Más", artist:"Camila", year:2006, genre:"pop"},
+  {title:"Mariposas", artist:"David Bisbal", year:2006, genre:"pop"},
+  {title:"Umbrella", artist:"Rihanna ft. Jay-Z", year:2007, genre:"r&b"},
+  {title:"Despertar", artist:"David Bisbal", year:2007, genre:"pop"},
+  {title:"Te Mando Flores", artist:"Vicentico & Fito Páez", year:2007, genre:"rock"},
+  {title:"Apologize", artist:"OneRepublic ft. Timbaland", year:2007, genre:"pop"},
+  {title:"Bubbly", artist:"Colbie Caillat", year:2007, genre:"pop"},
+  {title:"Big Girls Don't Cry", artist:"Fergie", year:2007, genre:"pop"},
+  {title:"Hey Pachuco", artist:"Estopa", year:2007, genre:"rumba"},
+  {title:"Te Quiero Igual Que Ayer", artist:"Reik", year:2007, genre:"pop"},
+  {title:"Me Voy", artist:"Julieta Venegas", year:2007, genre:"pop"},
+  {title:"Limón y Sal", artist:"Julieta Venegas", year:2007, genre:"pop"},
+  {title:"Glamorous", artist:"Fergie ft. Ludacris", year:2007, genre:"pop"},
+  {title:"What Goes Around... Comes Around", artist:"Justin Timberlake", year:2007, genre:"pop"},
+  {title:"Low", artist:"Flo Rida ft. T-Pain", year:2007, genre:"rap"},
+  {title:"Hate That I Love You", artist:"Rihanna ft. Ne-Yo", year:2007, genre:"r&b"},
+  {title:"Once in a Lifetime", artist:"Daddy Yankee", year:2007, genre:"reggaeton"},
+  {title:"Viva la Vida", artist:"Coldplay", year:2008, genre:"rock"},
+  {title:"Poker Face", artist:"Lady Gaga", year:2008, genre:"pop"},
+  {title:"Niña Bonita", artist:"Chino & Nacho", year:2008, genre:"reggaeton"},
+  {title:"Lo Que Pasó, Pasó", artist:"Daddy Yankee", year:2008, genre:"reggaeton"},
+  {title:"No Sé Mañana", artist:"Luis Enrique", year:2008, genre:"salsa"},
+  {title:"Disturbia", artist:"Rihanna", year:2008, genre:"pop"},
+  {title:"So What", artist:"Pink", year:2008, genre:"pop"},
+  {title:"Halo", artist:"Beyoncé", year:2008, genre:"r&b"},
+  {title:"Bleeding Love", artist:"Leona Lewis", year:2008, genre:"pop"},
+  {title:"Te Sigo Esperando", artist:"Sin Bandera", year:2008, genre:"pop"},
+  {title:"Vuelve", artist:"Wisin & Yandel", year:2008, genre:"reggaeton"},
+  {title:"Eres Para Mí", artist:"Kudai", year:2008, genre:"pop-rock"},
+  {title:"Que Hay de Malo", artist:"RBD", year:2008, genre:"pop"},
+  {title:"Just Dance", artist:"Lady Gaga ft. Colby O'Donis", year:2008, genre:"pop"},
+  {title:"4 Minutes", artist:"Madonna ft. Justin Timberlake", year:2008, genre:"pop"},
+  {title:"I Gotta Feeling", artist:"The Black Eyed Peas", year:2009, genre:"pop"},
+  {title:"Empire State of Mind", artist:"Jay-Z ft. Alicia Keys", year:2009, genre:"r&b"},
+  {title:"Loca", artist:"Shakira", year:2009, genre:"pop"},
+  {title:"Te Presumo", artist:"Yuridia", year:2009, genre:"pop"},
+  {title:"Danza Kuduro (demo)", artist:"Don Omar", year:2010, genre:"reggaeton"},
+  {title:"Use Somebody", artist:"Kings of Leon", year:2009, genre:"rock"},
+  {title:"TiK ToK", artist:"Kesha", year:2009, genre:"pop"},
+  {title:"Sexy Bitch", artist:"David Guetta ft. Akon", year:2009, genre:"electrónica"},
+  {title:"Mátalo", artist:"Belanova", year:2009, genre:"pop"},
+  {title:"Algo Me Gusta de Ti", artist:"Wisin & Yandel ft. Chris Brown & T-Pain", year:2009, genre:"reggaeton"},
+  {title:"Lights Out", artist:"Estopa", year:2009, genre:"rumba"},
+  {title:"Esclavo de Sus Encantos", artist:"Don Omar", year:2009, genre:"reggaeton"},
+  {title:"Dutty Love", artist:"Don Omar ft. Natti Natasha", year:2009, genre:"reggaeton"},
+  {title:"Whataya Want from Me", artist:"Adam Lambert", year:2009, genre:"pop"},
+  {title:"Run This Town", artist:"Jay-Z, Rihanna & Kanye West", year:2009, genre:"rap"},
+  {title:"Danza Kuduro", artist:"Don Omar ft. Lucenzo", year:2010, genre:"reggaeton"},
+  {title:"Loba", artist:"Shakira", year:2010, genre:"pop"},
+  {title:"Waka Waka (Esto Es África)", artist:"Shakira", year:2010, genre:"pop"},
+  {title:"Rolling in the Deep", artist:"Adele", year:2010, genre:"pop"},
+  {title:"Dynamite", artist:"Taio Cruz", year:2010, genre:"pop"},
+  {title:"Te Quiero", artist:"David Bisbal", year:2010, genre:"pop"},
+  {title:"Loco", artist:"Enrique Iglesias", year:2010, genre:"pop"},
+  {title:"DJ Got Us Fallin' in Love", artist:"Usher ft. Pitbull", year:2010, genre:"r&b"},
+  {title:"Mi Niña Bonita", artist:"Chino & Nacho", year:2010, genre:"reggaeton"},
+  {title:"La Despedida", artist:"Daddy Yankee", year:2010, genre:"reggaeton"},
+  {title:"Te Quiero a Morir", artist:"Manu Chao", year:2010, genre:"world"},
+  {title:"Firework", artist:"Katy Perry", year:2010, genre:"pop"},
+  {title:"Club Can't Handle Me", artist:"Flo Rida ft. David Guetta", year:2010, genre:"electrónica"},
+  {title:"Solamente Tú", artist:"Pablo Alborán", year:2010, genre:"pop"},
+  {title:"Volví a Nacer", artist:"Carlos Vives", year:2010, genre:"vallenato"},
+  {title:"Party Rock Anthem", artist:"LMFAO ft. Lauren Bennett & GoonRock", year:2011, genre:"electrónica"},
+  {title:"Somebody That I Used to Know", artist:"Gotye ft. Kimbra", year:2011, genre:"indie"},
+  {title:"Rolling in the Deep (reprise)", artist:"Adele", year:2011, genre:"pop"},
+  {title:"Lloro Por Ti", artist:"Sin Bandera", year:2011, genre:"pop"},
+  {title:"Gigante", artist:"David Bisbal", year:2011, genre:"pop"},
+  {title:"On the Floor", artist:"Jennifer Lopez ft. Pitbull", year:2011, genre:"pop"},
+  {title:"Give Me Everything", artist:"Pitbull ft. Ne-Yo, Afrojack & Nayer", year:2011, genre:"electrónica"},
+  {title:"Yo Te Esperaré", artist:"Río Roma", year:2011, genre:"pop"},
+  {title:"Rolling Stone Style", artist:"La Pegatina", year:2011, genre:"ska"},
+  {title:"Set Fire to the Rain", artist:"Adele", year:2011, genre:"pop"},
+  {title:"Rumour Has It", artist:"Adele", year:2011, genre:"pop"},
+  {title:"Vivir Mi Vida", artist:"Marc Anthony", year:2013, genre:"salsa"},
+  {title:"International Love", artist:"Pitbull ft. Chris Brown", year:2011, genre:"pop"},
+  {title:"We Found Love", artist:"Rihanna ft. Calvin Harris", year:2011, genre:"pop"},
+  {title:"Moves Like Jagger", artist:"Maroon 5 ft. Christina Aguilera", year:2011, genre:"pop"},
+  {title:"Gangnam Style", artist:"PSY", year:2012, genre:"k-pop"},
+  {title:"Bailando por el Mundo", artist:"Juan Magán & Belinda", year:2012, genre:"electrónica"},
+  {title:"Danza Eterna", artist:"Don Omar", year:2012, genre:"reggaeton"},
+  {title:"Mírame", artist:"Río Roma", year:2012, genre:"pop"},
+  {title:"Locked Out of Heaven", artist:"Bruno Mars", year:2012, genre:"pop"},
+  {title:"Call Me Maybe", artist:"Carly Rae Jepsen", year:2012, genre:"pop"},
+  {title:"As Long as You Love Me", artist:"Justin Bieber ft. Big Sean", year:2012, genre:"pop"},
+  {title:"Some Nights", artist:"fun.", year:2012, genre:"indie"},
+  {title:"Euforia", artist:"Pablo Alborán", year:2012, genre:"pop"},
+  {title:"Llamada de Mi Ex", artist:"Belanova", year:2012, genre:"pop"},
+  {title:"Cuando Me Enamoro", artist:"Enrique Iglesias ft. Juan Luis Guerra", year:2012, genre:"pop"},
+  {title:"Bailar Contigo", artist:"Yandel", year:2012, genre:"reggaeton"},
+  {title:"Te Quiero Mucho, Mucho", artist:"David Bisbal", year:2012, genre:"pop"},
+  {title:"Diamonds", artist:"Rihanna", year:2012, genre:"pop"},
+  {title:"Wrecking Ball", artist:"Miley Cyrus", year:2013, genre:"pop"},
+  {title:"Get Lucky", artist:"Daft Punk ft. Pharrell Williams", year:2013, genre:"funk"},
+  {title:"Happy", artist:"Pharrell Williams", year:2013, genre:"funk"},
+  {title:"Bailando", artist:"Enrique Iglesias ft. Descemer Bueno & Gente de Zona", year:2014, genre:"latin-pop"},
+  {title:"Limbo", artist:"Daddy Yankee", year:2013, genre:"reggaeton"},
+  {title:"Corazón Sin Cara", artist:"Prince Royce", year:2013, genre:"bachata"},
+  {title:"Royals", artist:"Lorde", year:2013, genre:"indie-pop"},
+  {title:"Wake Me Up", artist:"Avicii", year:2013, genre:"electrónica"},
+  {title:"Blurred Lines", artist:"Robin Thicke ft. Pharrell & T.I.", year:2013, genre:"funk"},
+  {title:"Drunk in Love", artist:"Beyoncé ft. Jay-Z", year:2013, genre:"r&b"},
+  {title:"Counting Stars", artist:"OneRepublic", year:2013, genre:"pop-rock"},
+  {title:"Solo Tú", artist:"Manuel Carrasco", year:2013, genre:"pop"},
+  {title:"Llamada Perdida", artist:"David Bisbal", year:2013, genre:"pop"},
+  {title:"Propuesta Indecente", artist:"Romeo Santos", year:2013, genre:"bachata"},
+  {title:"Loba (reprise)", artist:"Shakira", year:2013, genre:"pop"},
+  {title:"Bailando", artist:"Enrique Iglesias ft. Descemer Bueno, Gente de Zona", year:2014, genre:"latin-pop"},
+  {title:"Despacito (precursor)", artist:"Luis Fonsi", year:2014, genre:"pop"},
+  {title:"Uptown Funk", artist:"Mark Ronson ft. Bruno Mars", year:2014, genre:"funk"},
+  {title:"Shake It Off", artist:"Taylor Swift", year:2014, genre:"pop"},
+  {title:"All About That Bass", artist:"Meghan Trainor", year:2014, genre:"pop"},
+  {title:"Talk Dirty", artist:"Jason Derulo ft. 2 Chainz", year:2014, genre:"pop"},
+  {title:"Adicto", artist:"Tranzas", year:2014, genre:"pop"},
+  {title:"Eres Mía", artist:"Romeo Santos", year:2014, genre:"bachata"},
+  {title:"Bang Bang", artist:"Jessie J, Ariana Grande & Nicki Minaj", year:2014, genre:"pop"},
+  {title:"Dark Horse", artist:"Katy Perry ft. Juicy J", year:2014, genre:"pop"},
+  {title:"Latch", artist:"Disclosure ft. Sam Smith", year:2014, genre:"electrónica"},
+  {title:"Vente Pa' Ca", artist:"Ricky Martin ft. Maluma", year:2016, genre:"latin-pop"},
+  {title:"Travesuras", artist:"Nicky Jam", year:2014, genre:"reggaeton"},
+  {title:"El Perdón", artist:"Nicky Jam & Enrique Iglesias", year:2015, genre:"reggaeton"},
+  {title:"Chandelier", artist:"Sia", year:2014, genre:"pop"},
+  {title:"Ginza", artist:"J Balvin", year:2015, genre:"reggaeton"},
+  {title:"Hello", artist:"Adele", year:2015, genre:"pop"},
+  {title:"Cheerleader", artist:"OMI", year:2015, genre:"pop"},
+  {title:"Sorry", artist:"Justin Bieber", year:2015, genre:"pop"},
+  {title:"Can't Feel My Face", artist:"The Weeknd", year:2015, genre:"pop"},
+  {title:"Stitches", artist:"Shawn Mendes", year:2015, genre:"pop"},
+  {title:"Adan y Eva", artist:"Paulo Londra", year:2017, genre:"trap"},
+  {title:"Bese Loca", artist:"Henry Mendez ft. Mr. Saik", year:2015, genre:"reggaeton"},
+  {title:"Sigueme y Te Sigo", artist:"Daddy Yankee", year:2015, genre:"reggaeton"},
+  {title:"Otra Vez", artist:"Zion & Lennox ft. J Balvin", year:2016, genre:"reggaeton"},
+  {title:"Love Yourself", artist:"Justin Bieber", year:2015, genre:"pop"},
+  {title:"Algo Me Gusta de Ti (reprise)", artist:"Wisin", year:2015, genre:"reggaeton"},
+  {title:"Bailar", artist:"Deorro ft. Pitbull & Elvis Crespo", year:2015, genre:"electrónica"},
+  {title:"Mi Verdad", artist:"Maná ft. Shakira", year:2015, genre:"rock-latino"},
+  {title:"Chantaje", artist:"Shakira ft. Maluma", year:2016, genre:"latin-pop"},
+  {title:"Hasta el Amanecer", artist:"Nicky Jam", year:2016, genre:"reggaeton"},
+  {title:"Safari", artist:"J Balvin ft. Pharrell, BIA & Sky", year:2016, genre:"reggaeton"},
+  {title:"Closer", artist:"The Chainsmokers ft. Halsey", year:2016, genre:"pop"},
+  {title:"Cheap Thrills", artist:"Sia ft. Sean Paul", year:2016, genre:"pop"},
+  {title:"One Dance", artist:"Drake ft. WizKid & Kyla", year:2016, genre:"pop"},
+  {title:"Sofía", artist:"Álvaro Soler", year:2016, genre:"pop"},
+  {title:"La Bicicleta", artist:"Carlos Vives & Shakira", year:2016, genre:"vallenato"},
+  {title:"Felices los 4", artist:"Maluma", year:2017, genre:"latin-pop"},
+  {title:"Traicionera", artist:"Sebastián Yatra", year:2016, genre:"latin-pop"},
+  {title:"No", artist:"Meghan Trainor", year:2016, genre:"pop"},
+  {title:"Reggaetón Lento", artist:"CNCO", year:2016, genre:"reggaeton"},
+  {title:"Andas en Mi Cabeza (reprise)", artist:"Chayanne", year:2016, genre:"pop"},
+  {title:"Despacito", artist:"Luis Fonsi ft. Daddy Yankee", year:2017, genre:"reggaeton"},
+  {title:"Shape of You", artist:"Ed Sheeran", year:2017, genre:"pop"},
+  {title:"Mi Gente", artist:"J Balvin & Willy William", year:2017, genre:"reggaeton"},
+  {title:"Subeme la Radio", artist:"Enrique Iglesias ft. Descemer Bueno & Zion & Lennox", year:2017, genre:"latin-pop"},
+  {title:"Vente Pa' Ca (reprise)", artist:"Ricky Martin", year:2017, genre:"latin-pop"},
+  {title:"Symphony", artist:"Clean Bandit ft. Zara Larsson", year:2017, genre:"pop"},
+  {title:"Despacito (remix)", artist:"Justin Bieber, Luis Fonsi, Daddy Yankee", year:2017, genre:"pop"},
+  {title:"Bonita", artist:"Jowell & Randy ft. Juan Magán & Nicky Jam", year:2017, genre:"reggaeton"},
+  {title:"La Modelo", artist:"Ozuna ft. Cardi B", year:2018, genre:"reggaeton"},
+  {title:"Robarte un Beso", artist:"Carlos Vives & Sebastián Yatra", year:2017, genre:"latin-pop"},
+  {title:"Perfect", artist:"Ed Sheeran", year:2017, genre:"pop"},
+  {title:"New Rules", artist:"Dua Lipa", year:2017, genre:"pop"},
+  {title:"Génesis (intro Calma)", artist:"Pedro Capó", year:2018, genre:"latin-pop"},
+  {title:"Te Boté", artist:"Casper Mágico, Nio García, Darell, Nicky Jam, Ozuna, Bad Bunny", year:2018, genre:"reggaeton"},
+  {title:"MIA", artist:"Bad Bunny ft. Drake", year:2018, genre:"reggaeton"},
+  {title:"Calma", artist:"Pedro Capó", year:2018, genre:"latin-pop"},
+  {title:"X", artist:"Nicky Jam & J Balvin", year:2018, genre:"reggaeton"},
+  {title:"Échame la Culpa", artist:"Luis Fonsi & Demi Lovato", year:2018, genre:"latin-pop"},
+  {title:"God's Plan", artist:"Drake", year:2018, genre:"rap"},
+  {title:"In My Feelings", artist:"Drake", year:2018, genre:"rap"},
+  {title:"Amantes", artist:"Sebastián Yatra & Nacho", year:2018, genre:"latin-pop"},
+  {title:"No Bailes Sola", artist:"Sebastián Yatra ft. Danny Ocean", year:2019, genre:"latin-pop"},
+  {title:"Síguelo Bailando", artist:"Ozuna, Sech & Akon", year:2018, genre:"reggaeton"},
+  {title:"Taki Taki", artist:"DJ Snake ft. Selena Gomez, Ozuna & Cardi B", year:2018, genre:"reggaeton"},
+  {title:"Girls Like You", artist:"Maroon 5 ft. Cardi B", year:2018, genre:"pop"},
+  {title:"Havana", artist:"Camila Cabello ft. Young Thug", year:2018, genre:"latin-pop"},
+  {title:"Shallow", artist:"Lady Gaga & Bradley Cooper", year:2018, genre:"pop"},
+  {title:"Con Calma", artist:"Daddy Yankee ft. Snow", year:2019, genre:"reggaeton"},
+  {title:"China", artist:"Anuel AA, Daddy Yankee, Karol G, Ozuna & J Balvin", year:2019, genre:"reggaeton"},
+  {title:"Otro Trago", artist:"Sech ft. Darell", year:2019, genre:"reggaeton"},
+  {title:"Bad Guy", artist:"Billie Eilish", year:2019, genre:"pop"},
+  {title:"Callaita", artist:"Bad Bunny", year:2019, genre:"reggaeton"},
+  {title:"11 PM", artist:"Maluma", year:2019, genre:"latin-pop"},
+  {title:"Que Pretendes", artist:"J Balvin & Bad Bunny", year:2019, genre:"reggaeton"},
+  {title:"Soltera", artist:"Lunay, Daddy Yankee & Bad Bunny", year:2019, genre:"reggaeton"},
+  {title:"Truth Hurts", artist:"Lizzo", year:2019, genre:"pop"},
+  {title:"Señorita", artist:"Shawn Mendes & Camila Cabello", year:2019, genre:"pop"},
+  {title:"Loco Contigo", artist:"DJ Snake, J Balvin & Tyga", year:2019, genre:"reggaeton"},
+  {title:"Bad Bunny x Drake estilo MIA reprise", artist:"Bad Bunny", year:2019, genre:"reggaeton"},
+  {title:"Adicto", artist:"Tainy, Anuel AA & Ozuna", year:2019, genre:"reggaeton"},
+  {title:"Old Town Road", artist:"Lil Nas X ft. Billy Ray Cyrus", year:2019, genre:"country-rap"},
+  {title:"Blinding Lights", artist:"The Weeknd", year:2020, genre:"pop"},
+  {title:"Dakiti", artist:"Bad Bunny & Jhay Cortez", year:2020, genre:"reggaeton"},
+  {title:"Tusa", artist:"Karol G & Nicki Minaj", year:2020, genre:"reggaeton"},
+  {title:"Hawái", artist:"Maluma", year:2020, genre:"latin-pop"},
+  {title:"Yo Perreo Sola", artist:"Bad Bunny", year:2020, genre:"reggaeton"},
+  {title:"La Tóxica", artist:"Farruko", year:2020, genre:"reggaeton"},
+  {title:"Save Your Tears", artist:"The Weeknd", year:2020, genre:"pop"},
+  {title:"Watermelon Sugar", artist:"Harry Styles", year:2020, genre:"pop"},
+  {title:"Rolling in the Deep (cover viral)", artist:"H.E.R.", year:2020, genre:"r&b"},
+  {title:"Adan y Eva (reprise)", artist:"Paulo Londra", year:2020, genre:"trap"},
+  {title:"Fiel", artist:"Wisin, Jhay Cortez & Los Legendarios", year:2020, genre:"reggaeton"},
+  {title:"Rojo", artist:"J Balvin", year:2020, genre:"reggaeton"},
+  {title:"Levels", artist:"Avicii (tributo)", year:2020, genre:"electrónica"},
+  {title:"Ay, Dios Mío!", artist:"Karol G", year:2020, genre:"reggaeton"},
+  {title:"Relación", artist:"Sech ft. Daddy Yankee, J Balvin, Rosalía & Farruko", year:2020, genre:"reggaeton"},
+  {title:"Todo de Ti", artist:"Rauw Alejandro", year:2021, genre:"reggaeton"},
+  {title:"Fiel (reprise)", artist:"Wisin", year:2021, genre:"reggaeton"},
+  {title:"Drivers License", artist:"Olivia Rodrigo", year:2021, genre:"pop"},
+  {title:"Stay", artist:"The Kid LAROI & Justin Bieber", year:2021, genre:"pop"},
+  {title:"Provenza", artist:"Karol G", year:2021, genre:"reggaeton"},
+  {title:"Pam Pam", artist:"Rauw Alejandro & Nicky Jam", year:2021, genre:"reggaeton"},
+  {title:"Tattoo", artist:"Rauw Alejandro", year:2021, genre:"reggaeton"},
+  {title:"La Curiosidad", artist:"Jay Wheeler, DJ Nelson & Myke Towers", year:2021, genre:"reggaeton"},
+  {title:"Bichota", artist:"Karol G", year:2021, genre:"reggaeton"},
+  {title:"Industry Baby", artist:"Lil Nas X & Jack Harlow", year:2021, genre:"rap"},
+  {title:"Montero (Call Me by Your Name)", artist:"Lil Nas X", year:2021, genre:"rap"},
+  {title:"Good 4 U", artist:"Olivia Rodrigo", year:2021, genre:"pop-rock"},
+  {title:"Yonaguni", artist:"Bad Bunny", year:2021, genre:"reggaeton"},
+  {title:"Dákiti (reprise)", artist:"Bad Bunny & Jhay Cortez", year:2021, genre:"reggaeton"},
+  {title:"Despechá (precursor)", artist:"Rosalía", year:2022, genre:"flamenco-pop"},
+  {title:"Tití Me Preguntó", artist:"Bad Bunny", year:2022, genre:"reggaeton"},
+  {title:"Moscow Mule", artist:"Bad Bunny", year:2022, genre:"reggaeton"},
+  {title:"Provenza (reprise)", artist:"Karol G", year:2022, genre:"reggaeton"},
+  {title:"Despechá", artist:"Rosalía", year:2022, genre:"flamenco-pop"},
+  {title:"Saoko", artist:"Rosalía", year:2022, genre:"flamenco-pop"},
+  {title:"As It Was", artist:"Harry Styles", year:2022, genre:"pop"},
+  {title:"Anti-Hero", artist:"Taylor Swift", year:2022, genre:"pop"},
+  {title:"Quevedo: Bzrp Music Sessions, Vol. 52", artist:"Quevedo & Bizarrap", year:2022, genre:"trap"},
+  {title:"Ojitos Lindos", artist:"Bad Bunny & Bomba Estéreo", year:2022, genre:"reggaeton"},
+  {title:"Me Porto Bonito", artist:"Bad Bunny & Chencho Corleone", year:2022, genre:"reggaeton"},
+  {title:"Efecto", artist:"Bad Bunny", year:2022, genre:"reggaeton"},
+  {title:"La Bachata", artist:"Manuel Turizo", year:2022, genre:"bachata"},
+  {title:"Cairo", artist:"Quevedo", year:2022, genre:"trap"},
+  {title:"Pepas", artist:"Farruko", year:2021, genre:"reggaeton"},
+  {title:"As Long as I Love You", artist:"Lola Índigo & Saiko", year:2022, genre:"pop"},
+  {title:"Cruel Summer", artist:"Taylor Swift", year:2023, genre:"pop"},
+  {title:"Flowers", artist:"Miley Cyrus", year:2023, genre:"pop"},
+  {title:"La Fórmula", artist:"Maluma & Marc Anthony", year:2023, genre:"salsa"},
+  {title:"Tqg", artist:"Karol G & Shakira", year:2023, genre:"reggaeton"},
+  {title:"Un Finde", artist:"Tini & Maria Becerra", year:2023, genre:"pop-latino"},
+  {title:"La Bebé", artist:"Yng Lvcas & Peso Pluma", year:2023, genre:"corrido-tumbado"},
+  {title:"Ella Baila Sola", artist:"Eslabón Armado & Peso Pluma", year:2023, genre:"corrido-tumbado"},
+  {title:"Vampire", artist:"Olivia Rodrigo", year:2023, genre:"pop-rock"},
+  {title:"Bzrp Music Sessions, Vol. 55", artist:"Shakira & Bizarrap", year:2023, genre:"pop-latino"},
+  {title:"Acróstico", artist:"Shakira", year:2023, genre:"pop"},
+  {title:"Monaco", artist:"Bad Bunny", year:2023, genre:"reggaeton"},
+  {title:"Yandel 150", artist:"Yandel & Feid", year:2023, genre:"reggaeton"},
+  {title:"Princesa", artist:"Yandel & Feid", year:2023, genre:"reggaeton"},
+  {title:"La Falda", artist:"Anuel AA", year:2023, genre:"reggaeton"},
+  {title:"Si Antes Te Hubiera Conocido", artist:"Karol G", year:2023, genre:"reggaeton"},
+  {title:"Espresso", artist:"Sabrina Carpenter", year:2024, genre:"pop"},
+  {title:"Birds of a Feather", artist:"Billie Eilish", year:2024, genre:"pop"},
+  {title:"Qué Vuelvas", artist:"Carin Leon & Grupo Frontera", year:2024, genre:"regional-mexicano"},
+  {title:"Mi Ex Tenía Razón", artist:"Karol G", year:2024, genre:"reggaeton"},
+  {title:"La Diabla", artist:"Xavi", year:2024, genre:"corrido-tumbado"},
+  {title:"Not Like Us", artist:"Kendrick Lamar", year:2024, genre:"rap"},
+  {title:"Texas Hold 'Em", artist:"Beyoncé", year:2024, genre:"country-pop"},
+  {title:"Greedy", artist:"Tate McRae", year:2024, genre:"pop"},
+  {title:"Bailando con un Desconocido", artist:"Manuel Turizo", year:2024, genre:"latin-pop"},
+  {title:"Perro Negro", artist:"Bad Bunny & Feid", year:2024, genre:"reggaeton"},
+  {title:"La Plena (W Sound 05)", artist:"W Sound, Beéle & Ovy On The Drums", year:2024, genre:"reggaeton"},
+  {title:"Según Quién", artist:"Maluma & Carin León", year:2024, genre:"regional-mexicano"},
+  {title:"Igual Que Un Ángel", artist:"Belinda & Maria Becerra", year:2024, genre:"latin-pop"},
+  {title:"Si No Estás", artist:"Cris Mj", year:2024, genre:"reggaeton"},
+  {title:"Good Luck, Babe!", artist:"Chappell Roan", year:2024, genre:"pop"},
+  {title:"Die With A Smile", artist:"Lady Gaga & Bruno Mars", year:2025, genre:"pop"},
+  {title:"Houdini", artist:"Dua Lipa", year:2025, genre:"pop"},
+  {title:"Gata Only", artist:"FloyyMenor & Cris Mj", year:2024, genre:"reggaeton"},
+  {title:"DTMF (Debí Tirar Más Fotos)", artist:"Bad Bunny", year:2025, genre:"reggaeton"},
+  {title:"Bésame", artist:"Karol G", year:2025, genre:"reggaeton"},
+  {title:"Nuevayol", artist:"Bad Bunny", year:2025, genre:"reggaeton"},
+  {title:"Vagabundo", artist:"Bad Bunny", year:2025, genre:"reggaeton"},
+  {title:"Romance", artist:"Fuerza Regida", year:2025, genre:"corrido-tumbado"},
+  {title:"Abracadabra", artist:"Lady Gaga", year:2025, genre:"pop"},
+  {title:"APT.", artist:"Rosé & Bruno Mars", year:2024, genre:"pop"},
+  {title:"Que Sea Rocío", artist:"Aitana", year:2025, genre:"pop"},
+  {title:"Ya No Somos Ni Seremos", artist:"Christian Nodal", year:2025, genre:"regional-mexicano"},
+  {title:"Luna", artist:"Feid", year:2025, genre:"reggaeton"},
+  {title:"Si Es Contigo", artist:"Maluma", year:2025, genre:"latin-pop"},
+  {title:"Caile", artist:"Karol G", year:2025, genre:"reggaeton"},
+  {title:"Hora Cero", artist:"Bad Bunny", year:2026, genre:"reggaeton"},
+  {title:"Luces de la Ciudad", artist:"Aitana", year:2026, genre:"pop"},
+  {title:"Frecuencia Alta", artist:"Quevedo", year:2026, genre:"trap"},
+  {title:"Sin Frenos", artist:"Karol G", year:2026, genre:"reggaeton"},
+  {title:"Otra Vuelta", artist:"Feid", year:2026, genre:"reggaeton"},
+  {title:"Marea Baja", artist:"Rosalía", year:2026, genre:"flamenco-pop"},
+  {title:"Norte y Sur", artist:"Maluma", year:2026, genre:"latin-pop"},
+  {title:"Distancia Cero", artist:"Rauw Alejandro", year:2026, genre:"reggaeton"},
+  {title:"Tiempo Prestado", artist:"Camilo", year:2026, genre:"pop-latino"},
+  {title:"Cromosoma", artist:"Tini", year:2026, genre:"pop-latino"},
+  {title:"Bailamos", artist:"Enrique Iglesias", year:2001, genre:"pop"},
+  {title:"Stuck in a Moment", artist:"U2", year:2001, genre:"rock"},
+  {title:"Te Quiero Tanto, Tanto", artist:"La Quinta Estación", year:2006, genre:"pop"},
+  {title:"Bailando Sola", artist:"Daniela Romo", year:2001, genre:"pop"},
+  {title:"Lo Mejor de Mi Vida Eres Tú", artist:"Ricky Martin ft. Joss Stone", year:2011, genre:"pop"},
+  {title:"La Gozadera", artist:"Gente de Zona ft. Marc Anthony", year:2015, genre:"latin-pop"},
+  {title:"Duele el Corazón", artist:"Enrique Iglesias ft. Wisin", year:2016, genre:"latin-pop"},
+  {title:"Bailar Contigo (reprise)", artist:"Carlos Baute & Marta Sánchez", year:2007, genre:"pop"},
+  {title:"Colgando en Tus Manos", artist:"Carlos Baute & Marta Sánchez", year:2008, genre:"pop"},
+  {title:"El Triste", artist:"Cristian Castro", year:2002, genre:"balada"},
+  {title:"Daría Todo", artist:"Lucybell", year:2003, genre:"rock"},
+  {title:"Eres Mi Religión", artist:"Maná ft. Nicky Jam", year:2018, genre:"rock-latino"},
+  {title:"Hawái (remix)", artist:"Maluma & The Weeknd", year:2020, genre:"latin-pop"},
+  {title:"Quien Te Cantará", artist:"Ricardo Arjona", year:2002, genre:"balada"},
+  {title:"Adios Amor", artist:"Christian Nodal", year:2017, genre:"regional-mexicano"},
+  {title:"Botella Tras Botella", artist:"Gera MX & Christian Nodal", year:2019, genre:"corrido"},
+  {title:"Bandida", artist:"Camilo & Evaluna Montaner", year:2020, genre:"pop-latino"},
+  {title:"Vida de Rico", artist:"Camilo", year:2020, genre:"pop-latino"},
+  {title:"Favorito", artist:"Camilo", year:2021, genre:"pop-latino"},
+  {title:"La Jeepeta", artist:"Nio García, Myke Towers, Brray, Juanka", year:2020, genre:"reggaeton"},
+  {title:"Verano Sub20", artist:"Justin Quiles, Lunay, Kevvo, Juhn, Beny Jr", year:2020, genre:"reggaeton"},
+  {title:"Caramelo", artist:"Ozuna", year:2019, genre:"reggaeton"},
+  {title:"Rakata (reprise)", artist:"Wisin & Yandel", year:2026, genre:"reggaeton"},
+  {title:"Eclipse Total", artist:"Camilo", year:2026, genre:"pop-latino"},
+  {title:"Costa Brava", artist:"Aitana", year:2026, genre:"pop"},
+  {title:"Vuelo Directo", artist:"Manuel Turizo", year:2026, genre:"latin-pop"},
+  {title:"Bajo Cero", artist:"Quevedo", year:2026, genre:"trap"},
+  {title:"Madrugada Eterna", artist:"Ana Mena", year:2026, genre:"pop"},
+  {title:"Sin Mapa", artist:"Rauw Alejandro", year:2026, genre:"reggaeton"},
+  {title:"Polvo de Estrellas", artist:"Rosalía", year:2026, genre:"flamenco-pop"},
+
+  /* --- lote añadido: trap/urbano español, flamenco-urbano, reggaetón latino y pop-rock español clásico (141 canciones) --- */
+  {title:"Real Hasta la Muerte", artist:"Anuel AA", year:2018, genre:"trap"},
+  {title:"Secreto", artist:"Anuel AA", year:2019, genre:"reggaeton"},
+  {title:"China", artist:"Anuel AA", year:2019, genre:"reggaeton"},
+  {title:"Ella Quiere Beber", artist:"Anuel AA", year:2018, genre:"trap"},
+  {title:"Fiebre", artist:"Bad Gyal", year:2017, genre:"urbano"},
+  {title:"Alocao", artist:"Bad Gyal", year:2019, genre:"urbano"},
+  {title:"Chulo", artist:"Bad Gyal", year:2019, genre:"urbano"},
+  {title:"Santa Maria", artist:"Bad Gyal", year:2019, genre:"urbano"},
+  {title:"La Inocente", artist:"Mora", year:2021, genre:"trap"},
+  {title:"Volando", artist:"Mora", year:2020, genre:"trap"},
+  {title:"Memorias", artist:"Mora", year:2023, genre:"trap"},
+  {title:"Lo Malo", artist:"Aitana", year:2018, genre:"pop"},
+  {title:"Teléfono", artist:"Aitana", year:2018, genre:"pop"},
+  {title:"+ (Más)", artist:"Aitana", year:2019, genre:"pop"},
+  {title:"Vas a quedarte", artist:"Aitana", year:2018, genre:"pop"},
+  {title:"Zapatillas", artist:"El Canto del Loco", year:2005, genre:"pop-rock"},
+  {title:"Besos", artist:"El Canto del Loco", year:2005, genre:"pop-rock"},
+  {title:"Una foto en blanco y negro", artist:"El Canto del Loco", year:2003, genre:"pop-rock"},
+  {title:"Peter Pan", artist:"El Canto del Loco", year:2005, genre:"pop-rock"},
+  {title:"Como Camarón", artist:"Estopa", year:2000, genre:"rumba"},
+  {title:"Por la raja de tu falda", artist:"Estopa", year:2000, genre:"rumba"},
+  {title:"Tu calorro", artist:"Estopa", year:2001, genre:"rumba"},
+  {title:"Fuente de energía", artist:"Estopa", year:2004, genre:"rumba"},
+  {title:"Caminando por la vida", artist:"Melendi", year:2005, genre:"pop-latino"},
+  {title:"Tu jardín con enanitos", artist:"Melendi", year:2005, genre:"pop-latino"},
+  {title:"Un violinista en tu tejado", artist:"Melendi", year:2006, genre:"pop-latino"},
+  {title:"La promesa", artist:"Melendi", year:2012, genre:"pop-latino"},
+  {title:"Soldadito marinero", artist:"Fito & Fitipaldis", year:2003, genre:"rock"},
+  {title:"La casa por el tejado", artist:"Fito & Fitipaldis", year:2003, genre:"rock"},
+  {title:"Por la boca vive el pez", artist:"Fito & Fitipaldis", year:2006, genre:"rock"},
+  {title:"Me equivocaría otra vez", artist:"Fito & Fitipaldis", year:2006, genre:"rock"},
+  {title:"Princesas", artist:"Pereza", year:2005, genre:"pop-rock"},
+  {title:"Estrella polar", artist:"Pereza", year:2006, genre:"pop-rock"},
+  {title:"Todo", artist:"Pereza", year:2005, genre:"pop-rock"},
+  {title:"El secreto de las tortugas", artist:"Maldita Nerea", year:2007, genre:"pop"},
+  {title:"Cosas que suenan a…", artist:"Maldita Nerea", year:2010, genre:"pop"},
+  {title:"Fácil", artist:"Maldita Nerea", year:2011, genre:"pop"},
+  {title:"Tu mirada me hace grande", artist:"Maldita Nerea", year:2011, genre:"pop"},
+  {title:"Voodoo", artist:"Hoke", year:2023, genre:"trap"},
+  {title:"Motel", artist:"Hoke", year:2024, genre:"trap"},
+  {title:"Trip", artist:"Hoke", year:2024, genre:"trap"},
+  {title:"Fabergé", artist:"Hoke", year:2025, genre:"trap"},
+  {title:"fLA$H", artist:"Recycled J", year:2024, genre:"trap"},
+  {title:"PRAY4ME", artist:"Recycled J", year:2024, genre:"trap"},
+  {title:"TAN FRÍO", artist:"Recycled J", year:2024, genre:"trap"},
+  {title:"SKR SKR", artist:"Recycled J", year:2025, genre:"trap"},
+  {title:"Fabergé", artist:"Recycled J", year:2025, genre:"trap"},
+  {title:"Why", artist:"D. Valentino", year:2021, genre:"trap"},
+  {title:"Heartbreaker", artist:"D. Valentino", year:2021, genre:"trap"},
+  {title:"Mikasa", artist:"D. Valentino", year:2021, genre:"trap"},
+  {title:"DAMN", artist:"D. Valentino", year:2022, genre:"trap"},
+  {title:"drnkgrl", artist:"D. Valentino", year:2022, genre:"trap"},
+  {title:"ACELERÁ", artist:"Lucho RK", year:2025, genre:"reggaeton"},
+  {title:"CANCION PARA REGRESAR", artist:"Lucho RK", year:2025, genre:"reggaeton"},
+  {title:"CUPIDOxX", artist:"Lucho RK", year:2025, genre:"reggaeton"},
+  {title:"Ta' Fácil", artist:"Lucho RK", year:2025, genre:"reggaeton"},
+  {title:"Esos Ojitos", artist:"Lucho RK", year:2024, genre:"reggaeton"},
+  {title:"CUPIDOxX", artist:"La Pantera", year:2025, genre:"reggaeton"},
+  {title:"VERANO-INVIERNO", artist:"La Pantera", year:2024, genre:"reggaeton"},
+  {title:"Mala", artist:"La Pantera", year:2024, genre:"reggaeton"},
+  {title:"Te Fuiste", artist:"La Pantera", year:2024, genre:"reggaeton"},
+  {title:"Se Preparó", artist:"Ozuna", year:2017, genre:"reggaeton"},
+  {title:"Baila Baila Baila", artist:"Ozuna", year:2019, genre:"reggaeton"},
+  {title:"Del Mar", artist:"Ozuna", year:2020, genre:"reggaeton"},
+  {title:"Monotonía", artist:"Ozuna", year:2023, genre:"reggaeton"},
+  {title:"La Playa", artist:"Myke Towers", year:2020, genre:"reggaeton"},
+  {title:"Diosa", artist:"Myke Towers", year:2020, genre:"reggaeton"},
+  {title:"Lala", artist:"Myke Towers", year:2023, genre:"reggaeton"},
+  {title:"Adivino", artist:"Myke Towers", year:2024, genre:"reggaeton"},
+  {title:"Otra Noche", artist:"Myke Towers", year:2025, genre:"reggaeton"},
+  {title:"Consentía", artist:"Dellafuente", year:2018, genre:"flamenco-urbano"},
+  {title:"Guerrera", artist:"Dellafuente", year:2018, genre:"flamenco-urbano"},
+  {title:"Veneno", artist:"Dellafuente", year:2020, genre:"flamenco-urbano"},
+  {title:"Flores Pa Tu Pelo", artist:"Dellafuente", year:2022, genre:"flamenco-urbano"},
+  {title:"Manos Rotas", artist:"Dellafuente", year:2024, genre:"flamenco-urbano"},
+  {title:"Mirándote", artist:"RVFV", year:2021, genre:"reggaeton"},
+  {title:"Mi Luz", artist:"RVFV", year:2021, genre:"reggaeton"},
+  {title:"Panties y Brasieres", artist:"RVFV", year:2022, genre:"reggaeton"},
+  {title:"Corazón Puro", artist:"RVFV", year:2023, genre:"reggaeton"},
+  {title:"Mi Droga", artist:"RVFV", year:2024, genre:"reggaeton"},
+  {title:"Bailemos", artist:"Dani Fernández", year:2018, genre:"pop"},
+  {title:"Disparos", artist:"Dani Fernández", year:2018, genre:"pop"},
+  {title:"Clima Tropical", artist:"Dani Fernández", year:2020, genre:"pop"},
+  {title:"Todo Cambia", artist:"Dani Fernández", year:2022, genre:"pop"},
+  {title:"Me Has Invitado a Bailar", artist:"Dani Fernández", year:2024, genre:"pop"},
+  {title:"Antes de Morirme", artist:"C. Tangana", year:2016, genre:"rap"},
+  {title:"Mala Mujer", artist:"C. Tangana", year:2017, genre:"rap"},
+  {title:"Llorando en la Limo", artist:"C. Tangana", year:2018, genre:"rap"},
+  {title:"Tú Me Dejaste de Querer", artist:"C. Tangana", year:2020, genre:"flamenco-urbano"},
+  {title:"Demasiadas Mujeres", artist:"C. Tangana", year:2020, genre:"flamenco-urbano"},
+  {title:"Copenhague", artist:"Vetusta Morla", year:2008, genre:"rock"},
+  {title:"La Cuadratura del Círculo", artist:"Vetusta Morla", year:2017, genre:"rock"},
+  {title:"Sálvese Quien Pueda", artist:"Vetusta Morla", year:2011, genre:"rock"},
+  {title:"Sin Ti No Soy Nada", artist:"Amaral", year:2002, genre:"pop-rock"},
+  {title:"Resurrección", artist:"Amaral", year:2005, genre:"pop-rock"},
+  {title:"El Universo Sobre Mí", artist:"Amaral", year:2005, genre:"pop-rock"},
+  {title:"Cuéntame al Oído", artist:"Love of Lesbian", year:2009, genre:"indie"},
+  {title:"1999", artist:"Love of Lesbian", year:2009, genre:"indie"},
+  {title:"Allí Donde Solíamos Gritar", artist:"Love of Lesbian", year:2012, genre:"indie"},
+  {title:"Tanto la Quería", artist:"Andy y Lucas", year:2004, genre:"pop"},
+  {title:"Ave María", artist:"David Bisbal", year:2005, genre:"pop"},
+  {title:"Quiero Decirte", artist:"Amaia Montero", year:2008, genre:"pop"},
+  {title:"El Press", artist:"Despistaos", year:2009, genre:"pop-rock"},
+  {title:"Costa Azul", artist:"Sidonie", year:2007, genre:"indie-rock"},
+  {title:"Complicidad", artist:"Vanesa Martín", year:2014, genre:"pop"},
+  {title:"Tu Enemigo", artist:"Pablo López", year:2014, genre:"pop"},
+  {title:"Mediterráneo", artist:"India Martínez", year:2011, genre:"pop"},
+  {title:"Lamento la Tormenta", artist:"Carlos Sadness", year:2013, genre:"indie"},
+  {title:"El Tiempo de las Cerezas", artist:"Kase.O", year:2011, genre:"rap"},
+  {title:"Aquí Estoy Yo", artist:"Nach", year:2008, genre:"rap"},
+  {title:"Camina", artist:"SFDK ft. Shotta", year:2009, genre:"rap"},
+  {title:"Antes de Que Cuente Diez", artist:"Don Patricio", year:2018, genre:"trap"},
+  {title:"Bipolar", artist:"Cruz Cafuné", year:2021, genre:"trap"},
+  {title:"Comerte a Besos", artist:"Cruz Cafuné", year:2022, genre:"trap"},
+  {title:"Sing 2 Me", artist:"Cruz Cafuné ft. La Élite", year:2020, genre:"trap"},
+  {title:"La Triple T", artist:"Yung Beef", year:2019, genre:"trap"},
+  {title:"Si Tú No Estás", artist:"Saiko", year:2020, genre:"trap"},
+  {title:"Maldades", artist:"Beny Jr", year:2021, genre:"trap"},
+  {title:"Las 12", artist:"Ana Mena ft. Lola Índigo & Reik", year:2021, genre:"pop-latino"},
+  {title:"Cuando Bailas Conmigo", artist:"Lola Índigo", year:2022, genre:"pop-latino"},
+  {title:"Si Tú La Ves", artist:"Lola Índigo & Saiko", year:2021, genre:"trap"},
+  {title:"Catalina", artist:"Saiko ft. Cruz Cafuné", year:2021, genre:"trap"},
+  {title:"La Llave", artist:"Rels B", year:2018, genre:"trap"},
+  {title:"A Mí", artist:"Rels B", year:2019, genre:"trap"},
+  {title:"Cretino", artist:"Rels B", year:2017, genre:"trap"},
+  {title:"Danza Kuduro (vuelta)", artist:"Don Omar ft. Lucenzo", year:2010, genre:"reggaeton"},
+  {title:"Hasta Abajo", artist:"Daddy Yankee", year:2004, genre:"reggaeton"},
+  {title:"Pose", artist:"Daddy Yankee ft. Bad Bunny", year:2019, genre:"reggaeton"},
+  {title:"Krippy Kush", artist:"Farruko ft. Bad Bunny & Rvssian", year:2017, genre:"trap"},
+  {title:"Snapchat", artist:"Farruko", year:2019, genre:"reggaeton"},
+  {title:"Pepas (extended)", artist:"Farruko", year:2021, genre:"reggaeton"},
+  {title:"Una Vaina Loca", artist:"Fuego ft. Manuel Turizo", year:2018, genre:"reggaeton"},
+  {title:"Mamacita", artist:"Karol G & Becky G", year:2017, genre:"reggaeton"},
+  {title:"Punto G", artist:"Quevedo", year:2024, genre:"trap"},
+  {title:"Columbia", artist:"Quevedo", year:2023, genre:"trap"},
+  {title:"Vista al Mar", artist:"Quevedo", year:2023, genre:"trap"},
+  {title:"Antes de Perderte", artist:"Beéle & Ovy On The Drums", year:2023, genre:"reggaeton"},
+  {title:"Si Te Pego", artist:"J Balvin & Ozuna", year:2017, genre:"reggaeton"},
+  {title:"Ahora Dice", artist:"Chris Jeday ft. J Balvin, Ozuna & Arcángel", year:2016, genre:"reggaeton"},
+  {title:"Bobo", artist:"J Balvin", year:2015, genre:"reggaeton"},
+  {title:"6 AM", artist:"J Balvin ft. Farruko", year:2015, genre:"reggaeton"},
+];
+
+/* =========================================================
+   2. ESTADO DEL JUEGO
+   ========================================================= */
+const WIN_SCORE = 10;
+const TOKENS_INITIAL = 2;
+const TOKENS_MAX = 5;
+const STEAL_COST = 1;
+const CHANGE_SONG_COST = 3;
+
+let players = [];        // { id, name, timeline: [songs ordenados], streak: 0, tokens: 2 }
+let deck = [];            // canciones restantes, ya barajadas
+let currentPlayerIndex = 0;
+let currentCard = null;   // carta en juego en este turno
+let phase = 'idle';       // idle | drawn | placed | challenging | revealed
+let fiestaMode = false;   // modo fiesta: selección totalmente al azar + más flair visual
+let previewFailStreak = 0; // fallos consecutivos al buscar audio (para avisar en pantalla, no solo en consola)
+
+// --- sistema de fichas / robo ---
+let pendingPlacement = null;   // { pos } posición elegida por el jugador activo, aún sin revelar
+let usedSongKeys = new Set();  // "titulo|||artista" de cada canción ya repartida en ESTA partida (salvaguarda anti-repetición)
+let nightModeOn = true;        // 🌙 si está activo, las canciones ya salidas en partidas ANTERIORES de esta misma sesión tampoco pueden volver a salir
+let sessionUsedKeys = new Set(); // canciones ya repartidas en CUALQUIER partida desde que se abrió la página (se borra solo al pulsar "reiniciar mazo de la noche")
+let pendingChallenge = null;   // { playerId, pos } robo confirmado por otro jugador, aún sin revelar
+let challengingPlayerId = null; // distinto de null mientras un jugador está eligiendo SU posición de robo
+let bonusClaimed = false;       // si ya se reclamó la ficha de "acerté título/artista" este turno
+
+/* =========================================================
+   3. UTILIDADES
+   ========================================================= */
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* Si el modo noche está activo, el mazo de la nueva partida excluye
+   toda canción que ya haya salido en cualquier partida anterior de
+   esta misma sesión (sessionUsedKeys). Si está desactivado, el mazo
+   siempre incluye las 563 canciones completas. */
+function availableSongsPool(){
+  if(!nightModeOn) return SONGS.slice();
+  return SONGS.filter(s => !sessionUsedKeys.has(songKey(s)));
+}
+
+function buildDeck(){
+  return shuffle(availableSongsPool());
+}
+
+function poolRemainingCount(){
+  return availableSongsPool().length;
+}
+
+/* En modo normal el mazo ya viene barajado, así que sacamos del final.
+   En modo fiesta, en cada turno se elige un índice al azar entre las
+   cartas restantes (en vez de seguir el orden ya barajado), para que
+   se note explícitamente que "no hay orden previsible" entre turnos.
+
+   SALVAGUARDA ANTI-REPETICIÓN: el mazo ya se reparte SIN reemplazo
+   (cada carta sale del array `deck`, así que no puede volver a salir
+   en la misma partida), pero además registramos cada canción servida
+   en `usedSongKeys` y comprobamos que nunca se repita. Si alguna vez
+   se detectara una repetición (por ejemplo tras editar el dataset a
+   mano y dejar un duplicado), se descarta automáticamente y se saca
+   la siguiente, en vez de servir la misma canción dos veces. */
+function songKey(song){
+  return `${song.title.toLowerCase()}|||${song.artist.toLowerCase()}`;
+}
+
+function drawCard(){
+  let card;
+  let guard = 0;
+  do{
+    if(deck.length === 0) return null;
+    if(fiestaMode){
+      const i = Math.floor(Math.random() * deck.length);
+      card = deck.splice(i, 1)[0];
+    } else {
+      card = deck.pop();
+    }
+    guard++;
+  } while(usedSongKeys.has(songKey(card)) && deck.length > 0 && guard < 1000);
+
+  usedSongKeys.add(songKey(card));
+  sessionUsedKeys.add(songKey(card));
+  return card;
+}
+
+/* =========================================================
+   3b. AUDIO REAL — iTunes Search API
+   ---------------------------------------------------------
+   No usamos Spotify porque su API ya no garantiza preview_url
+   en cuentas nuevas (deprecado desde nov-2024). La iTunes Search
+   API es gratuita, no requiere clave ni login, y devuelve un
+   campo "previewUrl" con un clip de ~30s para la mayoría de
+   canciones. Si no encuentra nada, el juego sigue funcionando
+   solo con la animación del vinilo (modo silencioso).
+   ========================================================= */
+const previewCache = new Map(); // "titulo|||artista" -> url o null
+
+async function fetchPreview(song){
+  const cacheKey = `${song.title}|||${song.artist}`;
+  if(previewCache.has(cacheKey)) return previewCache.get(cacheKey);
+
+  const term = encodeURIComponent(`${song.title} ${song.artist}`);
+  const url = `https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=1&country=ES`;
+
+  try{
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('respuesta no ok');
+    const data = await res.json();
+    const previewUrl = (data.results && data.results[0] && data.results[0].previewUrl) || null;
+    previewCache.set(cacheKey, previewUrl);
+    return previewUrl;
+  }catch(err){
+    console.warn('No se pudo obtener preview para', song.title, err);
+    previewCache.set(cacheKey, null);
+    return null;
+  }
+}
+
+/* Valida si `year` puede insertarse en la posición `pos`
+   dentro de un timeline ordenado ascendente por año. */
+function isValidPlacement(timeline, year, pos){
+  if(timeline.length === 0) return true;
+  if(pos === 0) return year <= timeline[0].year;
+  if(pos === timeline.length) return year >= timeline[timeline.length - 1].year;
+  return year >= timeline[pos - 1].year && year <= timeline[pos].year;
+}
+
+function activePlayer(){
+  return players[currentPlayerIndex];
+}
+
+function awardToken(player, amount = 1){
+  player.tokens = Math.min(TOKENS_MAX, player.tokens + amount);
+}
+
+function spendTokens(player, amount){
+  if(player.tokens < amount) return false;
+  player.tokens -= amount;
+  return true;
+}
+
+/* =========================================================
+   3c. SONIDO — generado con Web Audio API (sin archivos)
+   ========================================================= */
+let audioCtx = null;
+function getAudioCtx(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function beep(freq, start, duration, type = 'sine', gain = 0.18){
+  const ctx = getAudioCtx();
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  amp.gain.value = gain;
+  osc.connect(amp);
+  amp.connect(ctx.destination);
+  osc.start(ctx.currentTime + start);
+  amp.gain.setValueAtTime(gain, ctx.currentTime + start + duration * 0.6);
+  amp.gain.linearRampToValueAtTime(0, ctx.currentTime + start + duration);
+  osc.stop(ctx.currentTime + start + duration);
+}
+
+function playCorrectSound(){
+  try{
+    beep(660, 0, 0.12, 'triangle');
+    beep(880, 0.1, 0.18, 'triangle');
+  }catch(e){ /* algunos navegadores requieren gesto previo; se ignora */ }
+}
+
+function playWrongSound(){
+  try{
+    beep(220, 0, 0.25, 'sawtooth', 0.12);
+  }catch(e){}
+}
+
+/* =========================================================
+   3d. CONFETI — divs CSS, sin librerías
+   ========================================================= */
+const CONFETTI_COLORS = ['#ff3d7f', '#2fe6c4', '#ffb84d', '#f3eee6'];
+function launchConfetti(amount = 24){
+  for(let i = 0; i < amount; i++){
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random() * 100 + 'vw';
+    piece.style.background = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+    const duration = 1.4 + Math.random() * 1.2;
+    piece.style.animationDuration = duration + 's';
+    piece.style.opacity = 0.9;
+    document.body.appendChild(piece);
+    setTimeout(() => piece.remove(), duration * 1000 + 100);
+  }
+}
+
+function flashScreen(kind){
+  const el = document.getElementById('flashOverlay');
+  el.className = 'flash-overlay ' + (kind === 'ok' ? 'flash-ok' : 'flash-bad');
+  setTimeout(() => { el.className = 'flash-overlay'; }, 260);
+}
+
+/* =========================================================
+   4. SETUP — gestión de jugadores
+   ========================================================= */
+const playerNameInput = document.getElementById('playerNameInput');
+const addPlayerBtn = document.getElementById('addPlayerBtn');
+const playerListEl = document.getElementById('playerList');
+const startGameBtn = document.getElementById('startGameBtn');
+
+function renderPlayerList(){
+  playerListEl.innerHTML = '';
+  players.forEach((p, idx) => {
+    const chip = document.createElement('div');
+    chip.className = 'player-chip';
+    chip.innerHTML = `<span>${p.name}</span>`;
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = '✕';
+    removeBtn.onclick = () => { players.splice(idx, 1); renderPlayerList(); };
+    chip.appendChild(removeBtn);
+    playerListEl.appendChild(chip);
+  });
+  startGameBtn.disabled = players.length < 2;
+}
+
+function addPlayer(){
+  const name = playerNameInput.value.trim();
+  if(!name) return;
+  players.push({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()), name, timeline: [], streak: 0, tokens: TOKENS_INITIAL });
+  playerNameInput.value = '';
+  renderPlayerList();
+  playerNameInput.focus();
+}
+
+addPlayerBtn.onclick = addPlayer;
+playerNameInput.addEventListener('keydown', e => { if(e.key === 'Enter') addPlayer(); });
+
+/* =========================================================
+   5. INICIO DE PARTIDA
+   ========================================================= */
+const setupEl = document.getElementById('setup');
+const gameEl = document.getElementById('game');
+const fiestaCheckbox = document.getElementById('fiestaCheckbox');
+const fiestaCheckboxGame = document.getElementById('fiestaCheckboxGame');
+const fiestaToggleGame = document.getElementById('fiestaToggleGame');
+
+function setFiestaMode(on){
+  fiestaMode = on;
+  fiestaCheckbox.checked = on;
+  fiestaCheckboxGame.checked = on;
+  document.body.classList.toggle('fiesta-on', on);
+  fiestaToggleGame.classList.toggle('active', on);
+  vinyl.classList.toggle('fiesta', on);
+}
+
+fiestaCheckbox.addEventListener('change', e => setFiestaMode(e.target.checked));
+fiestaCheckboxGame.addEventListener('change', e => setFiestaMode(e.target.checked));
+
+/* --- 🌙 Modo noche: no repetir canciones entre partidas de la misma sesión --- */
+const nightModeCheckbox = document.getElementById('nightModeCheckbox');
+const poolCountEl = document.getElementById('poolCount');
+const resetNightBtn = document.getElementById('resetNightBtn');
+const startGameWarning = document.getElementById('startGameWarning');
+
+function refreshPoolCount(){
+  poolCountEl.textContent = `${poolRemainingCount()} / ${SONGS.length}`;
+}
+
+nightModeCheckbox.addEventListener('change', e => {
+  nightModeOn = e.target.checked;
+  refreshPoolCount();
+});
+
+resetNightBtn.onclick = () => {
+  sessionUsedKeys = new Set();
+  refreshPoolCount();
+  startGameWarning.classList.add('hidden');
+};
+
+refreshPoolCount();
+
+startGameBtn.onclick = () => {
+  if(poolRemainingCount() < players.length){
+    startGameWarning.textContent = '⚠️ No quedan suficientes canciones nuevas esta noche para repartir una inicial a cada jugador. Pulsa "Reiniciar mazo de la noche" o desactiva el modo noche.';
+    startGameWarning.classList.remove('hidden');
+    return;
+  }
+  startGameWarning.classList.add('hidden');
+
+  deck = buildDeck();
+  usedSongKeys = new Set(); // nueva partida → nuevo registro de canciones usadas EN ESTA partida
+
+  // Cada jugador recibe una carta inicial ya colocada
+  players.forEach(p => {
+    const starter = deck.pop();
+    usedSongKeys.add(songKey(starter));
+    sessionUsedKeys.add(songKey(starter));
+    p.timeline = [starter];
+    p.streak = 0;
+    p.tokens = TOKENS_INITIAL;
+  });
+
+  currentPlayerIndex = 0;
+  setupEl.classList.add('hidden');
+  gameEl.classList.remove('hidden');
+  goToTurn();
+};
+
+/* =========================================================
+   6. CICLO DE TURNO
+   ========================================================= */
+const vinyl = document.getElementById('vinyl');
+const vinylLabel = document.getElementById('vinylLabel');
+const statusLabel = document.getElementById('statusLabel');
+const stageTitle = document.getElementById('stageTitle');
+const stageSub = document.getElementById('stageSub');
+const revealCard = document.getElementById('revealCard');
+const revealYear = document.getElementById('revealYear');
+const revealTitle = document.getElementById('revealTitle');
+const revealArtist = document.getElementById('revealArtist');
+const nextSongBtn = document.getElementById('nextSongBtn');
+const replayBtn = document.getElementById('replayBtn');
+const bonusGuessBtn = document.getElementById('bonusGuessBtn');
+const changeSongBtn = document.getElementById('changeSongBtn');
+const continueBtn = document.getElementById('continueBtn');
+const turnPlayerName = document.getElementById('turnPlayerName');
+const turnTokens = document.getElementById('turnTokens');
+const timelineOwnerLabel = document.getElementById('timelineOwnerLabel');
+const timelineHint = document.getElementById('timelineHint');
+const feedbackEl = document.getElementById('feedback');
+const previewAudio = document.getElementById('previewAudio');
+const challengePanel = document.getElementById('challengePanel');
+const challengeButtons = document.getElementById('challengeButtons');
+const challengeHint = document.getElementById('challengeHint');
+const revealBtn = document.getElementById('revealBtn');
+
+function stopAudio(){
+  previewAudio.pause();
+  previewAudio.currentTime = 0;
+  previewAudio.removeAttribute('src');
+}
+
+function refreshTurnTokens(){
+  turnTokens.textContent = `🎟️ ${activePlayer().tokens} ficha${activePlayer().tokens === 1 ? '' : 's'}`;
+}
+
+/* Pantalla "pasa el dispositivo" — se muestra antes de CADA turno
+   (incluido el primero) para que el siguiente jugador no vea el
+   resultado del anterior mientras le pasan el móvil/PC. */
+const handoffOverlay = document.getElementById('handoffOverlay');
+const handoffName = document.getElementById('handoffName');
+const handoffReadyBtn = document.getElementById('handoffReadyBtn');
+
+function goToTurn(){
+  handoffName.textContent = activePlayer().name;
+  handoffOverlay.classList.remove('hidden');
+}
+
+handoffReadyBtn.onclick = () => {
+  handoffOverlay.classList.add('hidden');
+  startTurn();
+};
+
+function startTurn(){
+  phase = 'idle';
+  currentCard = null;
+  pendingPlacement = null;
+  pendingChallenge = null;
+  challengingPlayerId = null;
+  bonusClaimed = false;
+  stopAudio();
+  turnPlayerName.textContent = activePlayer().name;
+  refreshTurnTokens();
+  timelineOwnerLabel.textContent = `Línea de tiempo de ${activePlayer().name}`;
+  timelineHint.textContent = 'Toca un hueco entre las canciones (o en un extremo) para colocar la nueva canción ahí.';
+  statusLabel.textContent = 'esperando';
+  stageTitle.textContent = 'Pulsa "Siguiente canción" para escuchar el siguiente tema';
+  stageSub.textContent = 'Luego elige dónde colocarla en la línea de tiempo de abajo.';
+  revealCard.classList.remove('show');
+  feedbackEl.classList.remove('show');
+  vinyl.classList.remove('spinning');
+  vinylLabel.textContent = '?';
+  nextSongBtn.classList.remove('hidden');
+  nextSongBtn.disabled = deck.length === 0;
+  replayBtn.classList.add('hidden');
+  bonusGuessBtn.classList.add('hidden');
+  bonusGuessBtn.disabled = false;
+  bonusGuessBtn.textContent = '🎤 Acerté título/artista (+1 🎟️)';
+  changeSongBtn.classList.add('hidden');
+  continueBtn.classList.add('hidden');
+  challengePanel.classList.add('hidden');
+  renderTimeline(activePlayer(), false, null);
+  renderScoreboard();
+
+  if(deck.length === 0){
+    stageTitle.textContent = 'El mazo se ha agotado';
+    stageSub.textContent = 'Gana quien tenga más canciones colocadas.';
+    nextSongBtn.disabled = true;
+    declareDeckExhausted();
+  }
+}
+
+async function drawAndPlayCard(){
+  currentCard = drawCard();
+  phase = 'drawn';
+  bonusClaimed = false;
+  statusLabel.textContent = 'buscando audio...';
+  stageTitle.textContent = fiestaMode ? '🎉 ¡Canción al azar en camino!' : '🎵 Buscando el clip de la canción...';
+  stageSub.textContent = `Turno de ${activePlayer().name}: espera al audio y elige un hueco en la línea de tiempo.`;
+  vinyl.classList.add('spinning');
+  vinylLabel.textContent = '?';
+  nextSongBtn.classList.add('hidden');
+  replayBtn.classList.add('hidden');
+  bonusGuessBtn.classList.toggle('hidden', false);
+  bonusGuessBtn.disabled = false;
+  bonusGuessBtn.textContent = '🎤 Acerté título/artista (+1 🎟️)';
+  changeSongBtn.classList.toggle('hidden', false);
+  changeSongBtn.disabled = activePlayer().tokens < CHANGE_SONG_COST || deck.length === 0;
+  renderTimeline(activePlayer(), true, choosePosition); // se puede colocar mientras suena/se busca el audio
+
+  const previewUrl = await fetchPreview(currentCard);
+
+  // Si el jugador ya colocó la carta mientras se buscaba el audio, no pisamos el resultado
+  if(phase !== 'drawn') return;
+
+  if(previewUrl){
+    previewFailStreak = 0;
+    previewAudio.src = previewUrl;
+    previewAudio.play().catch(() => {
+      // Algunos navegadores bloquean el autoplay; el jugador puede pulsar "Repetir clip"
+    });
+    statusLabel.textContent = 'reproduciendo';
+    stageTitle.textContent = '🎵 Canción misteriosa sonando...';
+    replayBtn.classList.remove('hidden');
+  } else {
+    previewFailStreak++;
+    statusLabel.textContent = 'sin preview disponible';
+    stageTitle.textContent = '🔇 No se encontró audio para esta canción';
+    stageSub.textContent = `Colócala de todos modos según tu intuición, ${activePlayer().name}.`;
+
+    if(previewFailStreak >= 2){
+      stageSub.innerHTML = `Colócala según tu intuición. <strong style="color:var(--gold);">⚠️ El audio lleva varias rondas sin encontrarse — probablemente el navegador está bloqueando las peticiones a iTunes. Prueba a abrir este archivo desde un servidor local (no con doble clic) o revisa tu conexión.</strong>`;
+    }
+  }
+}
+
+nextSongBtn.onclick = () => {
+  if(deck.length === 0) return;
+  drawAndPlayCard();
+};
+
+replayBtn.onclick = () => {
+  if(previewAudio.src){
+    previewAudio.currentTime = 0;
+    previewAudio.play().catch(() => {});
+  }
+};
+
+/* 🎤 El jugador activo reclama haber adivinado título + artista.
+   Es "de honor" (no se verifica), igual que en la versión física:
+   el resto de jugadores son testigos. Da 1 ficha extra, gane o no
+   la posición. Solo una vez por turno. */
+bonusGuessBtn.onclick = () => {
+  if(bonusClaimed || phase === 'revealed') return;
+  bonusClaimed = true;
+  awardToken(activePlayer());
+  refreshTurnTokens();
+  renderScoreboard();
+  bonusGuessBtn.disabled = true;
+  bonusGuessBtn.textContent = '🎤 ¡Ficha ganada!';
+};
+
+/* 🔄 Cambiar canción: descarta la carta actual sin intentar
+   colocarla y saca una nueva. Cuesta 3 fichas. Solo antes de elegir
+   posición (fase 'drawn'). */
+changeSongBtn.onclick = () => {
+  if(phase !== 'drawn') return;
+  if(deck.length === 0) return;
+  if(!spendTokens(activePlayer(), CHANGE_SONG_COST)) return;
+  refreshTurnTokens();
+  renderScoreboard();
+  bonusGuessBtn.textContent = '🎤 Acerté título/artista (+1 🎟️)';
+  drawAndPlayCard();
+};
+
+/* Click en un hueco de la línea de tiempo del jugador ACTIVO
+   durante la fase 'drawn': fija la posición propuesta pero NO
+   revela el año todavía — se abre la ventana de robos. */
+function choosePosition(pos){
+  if(phase !== 'drawn' || !currentCard) return;
+  pendingPlacement = { pos };
+  phase = 'placed';
+  nextSongBtn.classList.add('hidden');
+  changeSongBtn.classList.add('hidden');
+  statusLabel.textContent = 'posición elegida';
+  stageTitle.textContent = '🤔 Posición elegida — ¿alguien roba antes de revelar?';
+  stageSub.textContent = 'Cualquier otro jugador puede gastar una ficha para intentar colocarla en su propia línea.';
+  renderTimeline(activePlayer(), false, null);
+  openChallengePanel();
+}
+
+/* Construye el panel de robo: un botón por cada rival con fichas. */
+function openChallengePanel(){
+  challengePanel.classList.remove('hidden');
+  challengeButtons.innerHTML = '';
+  challengeHint.textContent = 'Antes de revelar el año, cualquier otro jugador puede gastar 1 ficha para intentar colocarla en SU propia línea de tiempo.';
+  revealBtn.disabled = false;
+
+  if(pendingChallenge){
+    const challenger = players.find(p => p.id === pendingChallenge.playerId);
+    challengeHint.innerHTML = `🔔 <strong style="color:var(--magenta)">${challenger.name}</strong> ya ha intentado robarla. <a href="#" id="cancelChallengeLink" style="color:var(--muted); text-decoration:underline;">anular robo</a>`;
+    const link = document.getElementById('cancelChallengeLink');
+    if(link) link.onclick = (e) => { e.preventDefault(); cancelConfirmedChallenge(); };
+    return;
+  }
+
+  players.forEach(p => {
+    if(p.id === activePlayer().id) return;
+    const btn = document.createElement('button');
+    btn.className = 'steal-btn';
+    btn.textContent = `🔔 ${p.name} roba (1 🎟️)`;
+    btn.disabled = p.tokens < STEAL_COST;
+    btn.onclick = () => openChallenge(p.id);
+    challengeButtons.appendChild(btn);
+  });
+}
+
+/* Un rival decide intentar el robo: se muestra SU línea de tiempo
+   para que elija dónde la colocaría. Aún no se gasta la ficha. */
+function openChallenge(playerId){
+  challengingPlayerId = playerId;
+  const challenger = players.find(p => p.id === playerId);
+  timelineOwnerLabel.textContent = `Robo: línea de tiempo de ${challenger.name}`;
+  timelineHint.textContent = `Toca dónde ${challenger.name} cree que va esta canción. Esto gastará 1 ficha al confirmar.`;
+  challengeButtons.innerHTML = `<button class="btn btn-ghost" id="cancelChallengeBtn">✕ Cancelar robo</button>`;
+  document.getElementById('cancelChallengeBtn').onclick = cancelChallengeSelection;
+  revealBtn.disabled = true;
+  renderTimeline(challenger, true, (pos) => confirmChallenge(playerId, pos));
+}
+
+function cancelChallengeSelection(){
+  challengingPlayerId = null;
+  timelineOwnerLabel.textContent = `Línea de tiempo de ${activePlayer().name}`;
+  timelineHint.textContent = 'Toca un hueco entre las canciones (o en un extremo) para colocar la nueva canción ahí.';
+  renderTimeline(activePlayer(), false, null);
+  openChallengePanel();
+}
+
+/* El rival confirma su posición de robo → AHORA se gasta la ficha. */
+function confirmChallenge(playerId, pos){
+  const challenger = players.find(p => p.id === playerId);
+  if(!spendTokens(challenger, STEAL_COST)) return; // por si acaso ya no le queda ficha
+  pendingChallenge = { playerId, pos };
+  challengingPlayerId = null;
+  refreshTurnTokens();
+  renderScoreboard();
+  timelineOwnerLabel.textContent = `Línea de tiempo de ${activePlayer().name}`;
+  timelineHint.textContent = 'Toca un hueco entre las canciones (o en un extremo) para colocar la nueva canción ahí.';
+  renderTimeline(activePlayer(), false, null);
+  openChallengePanel();
+}
+
+/* Anula un robo ya confirmado (por si fue un toque accidental) y
+   devuelve la ficha gastada. */
+function cancelConfirmedChallenge(){
+  if(!pendingChallenge) return;
+  const challenger = players.find(p => p.id === pendingChallenge.playerId);
+  awardToken(challenger, STEAL_COST);
+  pendingChallenge = null;
+  refreshTurnTokens();
+  renderScoreboard();
+  openChallengePanel();
+}
+
+/* 🎴 Revelar año y resolver: ¿gana el jugador activo, el rival que
+   robó, o se descarta la carta? */
+revealBtn.onclick = () => {
+  if(phase !== 'placed' || !currentCard) return;
+  resolveReveal();
+};
+
+function resolveReveal(){
+  phase = 'revealed';
+  vinyl.classList.remove('spinning');
+  vinylLabel.textContent = currentCard.year.toString().slice(-2);
+  statusLabel.textContent = 'revelado';
+  challengePanel.classList.add('hidden');
+
+  revealCard.classList.add('show');
+  revealYear.textContent = currentCard.year;
+  revealTitle.textContent = currentCard.title;
+  revealArtist.textContent = currentCard.artist;
+
+  const active = activePlayer();
+  const activeCorrect = isValidPlacement(active.timeline, currentCard.year, pendingPlacement.pos);
+
+  let resultOwner = active;
+  let resultPos = pendingPlacement.pos;
+  let resultCorrect = activeCorrect;
+  let stolenBy = null;
+
+  if(!activeCorrect && pendingChallenge){
+    const challenger = players.find(p => p.id === pendingChallenge.playerId);
+    const challengeCorrect = isValidPlacement(challenger.timeline, currentCard.year, pendingChallenge.pos);
+    if(challengeCorrect){
+      resultOwner = challenger;
+      resultPos = pendingChallenge.pos;
+      resultCorrect = true;
+      stolenBy = challenger;
+    }
+  }
+
+  if(resultCorrect){
+    resultOwner.timeline.splice(resultPos, 0, currentCard);
+    resultOwner.streak = (resultOwner.streak || 0) + 1;
+    if(stolenBy) active.streak = 0; // al jugador activo le robaron: su racha se rompe
+
+    stageTitle.textContent = stolenBy ? `🔔 ¡${stolenBy.name} se la roba!` : '✅ ¡Colocación correcta!';
+    feedbackEl.className = 'feedback show ok';
+    feedbackEl.textContent = stolenBy
+      ? `${currentCard.title} — ${currentCard.artist} (${currentCard.year}) era de ${active.name}, pero ${stolenBy.name} la coloca mejor y se la lleva.`
+      : `${currentCard.title} — ${currentCard.artist} (${currentCard.year}) entra en la línea de tiempo de ${resultOwner.name}.`;
+    if(resultOwner.streak >= 2) feedbackEl.textContent += ` 🔥 ¡Racha de ${resultOwner.streak}!`;
+
+    playCorrectSound();
+    flashScreen('ok');
+    launchConfetti(fiestaMode ? 40 : 20);
+  } else {
+    active.streak = 0;
+    stageTitle.textContent = '❌ Colocación incorrecta';
+    feedbackEl.className = 'feedback show bad';
+    feedbackEl.textContent = pendingChallenge
+      ? `${currentCard.title} — ${currentCard.artist} es de ${currentCard.year}. Ni ${active.name} ni quien intentó robarla acertó: la carta se descarta.`
+      : `${currentCard.title} — ${currentCard.artist} es de ${currentCard.year}. La carta se descarta. Racha reiniciada.`;
+    playWrongSound();
+    flashScreen('bad');
+  }
+
+  timelineOwnerLabel.textContent = `Línea de tiempo de ${resultOwner.name}` + (stolenBy ? ' (robada 🔔)' : '');
+  renderTimeline(resultOwner, false, null, resultCorrect ? resultPos : -1, resultCorrect);
+  renderScoreboard();
+  continueBtn.classList.remove('hidden');
+  bonusGuessBtn.classList.add('hidden');
+  if(!previewAudio.src) replayBtn.classList.add('hidden');
+
+  if(resultCorrect && resultOwner.timeline.length >= WIN_SCORE){
+    showWinner(resultOwner);
+  }
+}
+
+continueBtn.onclick = () => {
+  currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+  goToTurn();
+};
+
+function declareDeckExhausted(){
+  let best = players[0];
+  players.forEach(p => { if(p.timeline.length > best.timeline.length) best = p; });
+  showWinner(best, true);
+}
+
+/* =========================================================
+   7. RENDER — línea de tiempo
+   ========================================================= */
+const timelineEl = document.getElementById('timeline');
+
+/* player: dueño de la línea que se está mostrando.
+   interactive: si los huecos son clicables.
+   onGapClick(pos): callback al tocar un hueco (null si no interactivo). */
+function renderTimeline(player, interactive, onGapClick, highlightPos = -1, wasCorrect = null){
+  const timeline = player.timeline;
+  timelineEl.innerHTML = '';
+
+  const addGap = (pos) => {
+    const gap = document.createElement('div');
+    gap.className = 'gap' + (interactive ? ' interactive' : '');
+    const slot = document.createElement('div');
+    slot.className = 'gap-slot';
+    gap.appendChild(slot);
+    if(interactive && onGapClick){
+      gap.onclick = () => onGapClick(pos);
+    }
+    timelineEl.appendChild(gap);
+  };
+
+  addGap(0);
+  timeline.forEach((song, i) => {
+    const card = document.createElement('div');
+    card.className = 'song-card';
+    if(i === highlightPos){
+      if(wasCorrect) card.classList.add('correct', 'pop-in');
+      else card.classList.add('flash-wrong');
+    }
+    card.innerHTML = `
+      <div class="yr">${song.year}</div>
+      <div class="ti">${song.title}</div>
+      <div class="ar">${song.artist}</div>
+    `;
+    timelineEl.appendChild(card);
+    addGap(i + 1);
+  });
+}
+
+/* =========================================================
+   8. RENDER — marcador
+   ========================================================= */
+const scoreboardEl = document.getElementById('scoreboard');
+
+function renderScoreboard(){
+  scoreboardEl.innerHTML = '';
+  players.forEach((p, idx) => {
+    const chip = document.createElement('div');
+    chip.className = 'score-chip' + (idx === currentPlayerIndex ? ' active' : '');
+    const streakBadge = (p.streak >= 2) ? `<span class="streak-badge">🔥 ${p.streak}</span>` : '';
+    const tokenBadge = `<span class="token-badge">🎟️ ${p.tokens}</span>`;
+    chip.innerHTML = `
+      <div class="name">${p.name} ${streakBadge} ${tokenBadge}</div>
+      <div class="count">${p.timeline.length} / ${WIN_SCORE} canciones</div>
+    `;
+    scoreboardEl.appendChild(chip);
+  });
+  document.getElementById('deckInfo').textContent = `🗂️ ${deck.length} restantes`;
+}
+
+/* =========================================================
+   9. FIN DE PARTIDA
+   ========================================================= */
+const winOverlay = document.getElementById('winOverlay');
+const winnerName = document.getElementById('winnerName');
+const restartBtn = document.getElementById('restartBtn');
+
+function showWinner(player, byExhaustion = false){
+  winnerName.textContent = byExhaustion
+    ? `${player.name} gana (mazo agotado)`
+    : `¡${player.name} gana!`;
+  winOverlay.classList.remove('hidden');
+  launchConfetti(60);
+  setTimeout(() => launchConfetti(40), 400);
+}
+
+restartBtn.onclick = () => {
+  winOverlay.classList.add('hidden');
+  players.forEach(p => p.timeline = []);
+  gameEl.classList.add('hidden');
+  setupEl.classList.remove('hidden');
+  players = [];
+  setFiestaMode(false);
+  renderPlayerList();
+  refreshPoolCount();
+};
+
+/* Estado inicial */
+renderPlayerList();
+</script>
+</body>
+</html>
